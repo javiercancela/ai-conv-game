@@ -1,0 +1,20 @@
+[project]
+name = "convgame"
+version = "0.1.0"
+description = "A terminal conversation game: Jev decides, Bonsai speaks."
+requires-python = ">=3.11"
+dependencies = ["typesafe-sdk>=0.7.0,<0.8"]
+
+[project.scripts]
+convgame = "convgame.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
