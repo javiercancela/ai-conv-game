@@ -8,7 +8,6 @@ import sys
 import time
 
 from .bonsai import BonsaiNarrator
-from .demo import DemoDecider, DemoNarrator
 from .world import World, advance
 
 
@@ -106,7 +105,6 @@ def confidence(value: str) -> float:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="The Last Crossing: Jev decides, local Bonsai speaks.")
-    parser.add_argument("--demo", action="store_true", help="Offline rules and scripted dialogue; no models or API calls")
     parser.add_argument("--debug", action="store_true", help="Show typed decisions, timings, and world state")
     parser.add_argument("--check", action="store_true", help="Check configuration and Bonsai connectivity, then exit")
     parser.add_argument("--bonsai-url", default=os.environ.get("BONSAI_URL", "http://127.0.0.1:8080"))
@@ -114,17 +112,13 @@ def main() -> int:
     parser.add_argument("--jev-model", default=os.environ.get("TYPESAFE_DEFAULT_MODEL", "jev-latest"))
     parser.add_argument("--confidence", type=confidence, default=0.6, help="Action confidence floor (default: 0.6)")
     args = parser.parse_args()
-    if args.demo:
-        print("OFFLINE DEMO — keyword decisions and scripted dialogue; Jev and Bonsai are not used.")
-        return 0 if args.check else play(DemoDecider(), DemoNarrator(), args.debug, args.confidence)
-
     configured = bool(os.environ.get("TYPESAFE_API_KEY", "").strip())
     narrator = BonsaiNarrator(args.bonsai_url, args.bonsai_model)
     if args.check:
         print(f"TypeSafe API key: {'configured (not authenticated)' if configured else 'missing'}")
         print(f"Jev model: {args.jev_model}")
     if not configured:
-        print("Set TYPESAFE_API_KEY in your environment for live play, or use --demo.", file=sys.stderr)
+        print("Set TYPESAFE_API_KEY in your environment to play.", file=sys.stderr)
         if not args.check:
             return 1
     try:
@@ -149,4 +143,3 @@ def main() -> int:
         return 0
     finally:
         decider.close()
-

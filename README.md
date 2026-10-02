@@ -11,13 +11,9 @@ Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/javiercancela/ConvGame.git
 cd ConvGame
 uv sync
-uv run convgame --demo
 ```
 
-The explicit **offline demo** uses simple keyword matching and scripted dialogue.
-It lets you try the complete encounter without either service. Live mode is the default.
-
-For live play, start your existing Bonsai installation in a separate terminal:
+Start your existing Bonsai installation in a separate terminal:
 
 ```bash
 cd /home/xavi/Projects/Bonsai
@@ -42,7 +38,7 @@ Speak naturally or type actions such as `I read the ledger`. Commands `/look`,
 `/status`, `/help`, and `/quit` are free; each evaluated line uses one of twelve
 turns, including clarifications and off-world remarks. EOF and Ctrl+C exit cleanly.
 
-Try these lines for a short winning demo:
+Try these lines for a short winning game:
 
 ```text
 I read the ledger.
@@ -50,8 +46,7 @@ I promise to take a rope, use the east steps, and return your key.
 Please lend me the key.
 ```
 
-That walkthrough also exercises the intended live path, though actual Jev
-interpretations and confidence may require clarification or another reassurance.
+Jev's interpretations and confidence may require clarification or another reassurance.
 Threatening Maren repeatedly can end the encounter early.
 
 ## How it works
@@ -79,7 +74,7 @@ may occasionally contradict the directive; it is not semantically re-evaluated.
 
 Jev failures leave the turn and world unchanged. Bonsai failures use a clearly
 announced scripted response after the resolved action, so retrying does not apply
-an action twice. Live mode never silently substitutes the demo decision engine.
+an action twice.
 Game state is in memory; quitting starts a new encounter next time.
 
 ## Configuration and development
@@ -101,27 +96,25 @@ confidence checks, emotion changes, actions, and outcomes. The `jev/` package se
 question builder, response validation, and scene and question constants.
 `bonsai.py` owns local dialogue generation, and `cli.py` connects them.
 Tests cover mechanics, confidence gates, the actual SDK response shapes using a
-mock HTTP transport, Bonsai's HTTP contract, and complete offline play.
+mock HTTP transport, Bonsai's HTTP contract, and a complete game with test doubles.
 
 ### Debug in Visual Studio Code
 
 Open this project folder in VS Code and install the recommended Python and Python
-Debugger extensions if prompted. In **Run and Debug**, select **ConvGame: Offline
-demo**, set a breakpoint in `convgame/cli.py` or `convgame/world/turn.py`, and press
-**F5**. Enter game dialogue in the integrated terminal. Each launch runs
+Debugger extensions if prompted. In **Run and Debug**, select **ConvGame: Play**,
+set a breakpoint in `convgame/cli.py` or `convgame/world/turn.py`, and press
+**F5**. Enter game dialogue in the integrated terminal. The launch runs
 `uv sync --locked` and uses the project's `.venv` interpreter; `uv` must be on PATH.
-Both launch configurations enable the game's `--debug` diagnostics.
-
-For **ConvGame: Live play**, start Bonsai as described above and put your settings
-in a local `.env` file in the project root:
+The launch configuration enables the game's `--debug` diagnostics. Start Bonsai
+as described above and put your settings in a local `.env` file in the project root:
 
 ```dotenv
 TYPESAFE_API_KEY=your-api-key
 BONSAI_URL=http://127.0.0.1:8080
 ```
 
-The live debugger loads this file, which is already excluded by `.gitignore`.
-It can also use variables inherited by VS Code. Live play uses the TypeSafe API
+The debugger loads this file, which is already excluded by `.gitignore`.
+It can also use variables inherited by VS Code. Play uses the TypeSafe API
 as described below. Tests are available in VS Code's **Testing** view, where you
 can run or debug individual tests.
 

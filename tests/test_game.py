@@ -9,8 +9,7 @@ import pytest
 from typesafe_sdk import ChoiceAnswer, NoulAnswer, ScoreAnswer, TypeSafeClient
 
 from convgame.bonsai import BonsaiNarrator, two_sentences
-from convgame.cli import play
-from convgame.demo import DemoDecider, DemoNarrator
+from convgame.cli import main, play
 from convgame.jev import JevDecider, decode, questions
 from convgame.world import DIRECTIVES, Decisions, Pick, World, advance
 
@@ -19,58 +18,6 @@ def answers(**overrides):
     base = Decisions(Pick("chat", 0.95), Pick("none", 0.95), Pick("no", 0.95),
                      Pick("no", 0.95), Pick("no", 0.95), 0, 0.95, 0, 0)
     return replace(base, **overrides)
-
-
-def test_complete_demo_win():
-    world = World()
-    decider = DemoDecider()
-    events = []
-    for line in ["I read the ledger.",
-                 "I promise to take a rope, use the east steps, and return your key.",
-                 "Please lend me the key."]:
-        world, directive = advance(world, decider.decide(world, line))
-        events.append(directive.event)
-    assert world.ending == "won"
-    assert world.key_given
-    assert directive.event == "won"
-    assert world.turn == 3
-    assert events == ["ledger", "plan", "won"]
-
-
-@pytest.mark.parametrize("line", [
-    "I won't hurt you.",
-    "I won’t hurt you.",
-    "I will not hurt you.",
-    "I don't want to hurt you.",
-])
-def test_demo_denial_of_violence_reassures_without_threat_penalties(line):
-    world = World()
-    for _ in range(3):
-        decisions = DemoDecider().decide(world, line)
-        assert decisions.intent.value == "reassure"
-        assert decisions.hostility == 0
-        assert decisions.tension == 0
-        world, directive = advance(world, decisions)
-        assert directive.event == "reassure"
-    assert world.ending == "playing"
-    assert world.suspicion <= World().suspicion
-    assert world.trust >= World().trust
-
-
-@pytest.mark.parametrize("line", [
-    "I will hurt you.",
-    "I won't hurt you, but I will kill you.",
-    "I won't hurt you and I will kill you.",
-])
-def test_demo_explicit_threat_still_applies_penalties(line):
-    decisions = DemoDecider().decide(World(), line)
-    assert decisions.intent.value == "threaten"
-    assert decisions.hostility == 1
-    assert decisions.tension == 1
-    updated, directive = advance(World(), decisions)
-    assert directive.event == "threaten"
-    assert updated.suspicion > World().suspicion
-    assert updated.trust < World().trust
 
 
 @pytest.mark.parametrize("change", [
@@ -221,18 +168,48 @@ def test_bad_narration_is_rejected(text):
 
 
 def test_cli_free_commands_and_winning_game(monkeypatch, capsys):
+    decisions = iter([
+        answers(intent=Pick("inspect", 1), object=Pick("ledger", 1)),
+        answers(intent=Pick("persuade", 1), rescue_plan=Pick("yes", 1), reassurance=1),
+        answers(intent=Pick("request", 1), object=Pick("key", 1), handover=Pick("yes", 1)),
+    ])
+
+    class Decider:
+        def decide(self, world, line):
+            return next(decisions)
+
+    events = []
+
+    class Narrator:
+        def narrate(self, world, line, directive):
+            events.append((world.turn, directive.event, world.ending))
+            return "The rescue plan is clear. Be careful on the water."
+
     lines = iter(["/help", "/status", "/look", "", "I read the ledger.",
                   "I promise to take a rope, use the east steps, and return your key.",
                   "Please lend me the key."])
     monkeypatch.setattr("builtins.input", lambda _: next(lines))
-    assert play(DemoDecider(), DemoNarrator(), debug=True) == 0
+    assert play(Decider(), Narrator(), debug=True) == 0
     output = capsys.readouterr().out
     assert "you win" in output
     assert "Turn 3/12" in output
+    assert events == [(1, "ledger", "playing"), (2, "plan", "playing"), (3, "won", "won")]
+
+
+def test_cli_requires_live_model_configuration(monkeypatch, capsys):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.setattr("sys.argv", ["convgame"])
+    assert main() == 1
+    assert "Set TYPESAFE_API_KEY" in capsys.readouterr().err
+
+    monkeypatch.setattr("sys.argv", ["convgame", "--demo"])
+    with pytest.raises(SystemExit, match="2"):
+        main()
+    assert "unrecognized arguments: --demo" in capsys.readouterr().err
 
 
 def test_service_failures_do_not_double_apply_a_turn(monkeypatch, capsys):
-    class Decider(DemoDecider):
+    class Decider:
         def __init__(self):
             self.failed = False
 
@@ -241,7 +218,7 @@ def test_service_failures_do_not_double_apply_a_turn(monkeypatch, capsys):
                 self.failed = True
                 raise TimeoutError()
             assert world.turn == 0
-            return super().decide(world, line)
+            return answers(intent=Pick("inspect", 1), object=Pick("ledger", 1))
 
     class Narrator:
         def narrate(self, *args):
