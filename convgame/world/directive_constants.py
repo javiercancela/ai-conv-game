@@ -5,47 +5,47 @@ from typing import Final
 
 CLARIFY_EVENT: Final[str] = "clarify"
 CLARIFY_INSTRUCTION: Final[str] = (
-    "Ask the player to clarify; assume no action occurred."
+    "Ask the player to clarify the unresolved intention or explicitly address Maren; do not invent an outcome."
 )
 CLARIFY_FALLBACK: Final[str] = (
-    "You'll have to be clearer with me. What exactly are you asking?"
+    "Your intention is unclear. Describe an action, or address Maren with what you want to say."
 )
 
 
 OFF_WORLD_EVENT: Final[str] = "off_world"
-OFF_WORLD_INSTRUCTION: Final[str] = "Redirect strange or meta talk back to the rescue."
+OFF_WORLD_INSTRUCTION: Final[str] = "Redirect the player to the harbor scene without making Maren speak."
 OFF_WORLD_FALLBACK: Final[str] = (
-    "I've no time for riddles about other worlds. There's a rescue to arrange."
+    "The storm continues outside the harbor office. Describe an action here, or speak to Maren about the rescue."
 )
 
 
 LEDGER_EVENT: Final[str] = "ledger"
 LEDGER_INSTRUCTION: Final[str] = (
-    "Let the player read the ledger: east steps are sheltered; take a rope and "
-    "return the key."
+    "Describe only the ledger's written advice: the east steps are sheltered, and the notes "
+    "recommend taking a rope and returning the key. Reading these notes does not make a promise. "
+    "Do not put a rope in the office or invent player speech. Maren does not speak."
 )
 LEDGER_FALLBACK: Final[str] = (
-    "The ledger marks the east steps as sheltered from the storm. Take a rope and "
-    "promise to return my key."
+    "You read the tide ledger: the east steps are sheltered from the storm. "
+    "Its notes recommend taking a rope and returning the rescue key afterward."
 )
 
 
 KEY_EVENT: Final[str] = "key"
 KEY_INSTRUCTION: Final[str] = (
-    "Explain the key opens the rescue skiff locker; do not hand it over."
+    "Describe the brass rescue key on Maren's belt; it opens the skiff locker and stays with him."
 )
 KEY_FALLBACK: Final[str] = (
-    "This brass key opens the rescue skiff locker. Read the ledger before asking me "
-    "to risk it."
+    "The brass rescue key hangs from Maren's belt. It opens the rescue skiff locker and remains in his possession."
 )
 
 
 BELL_EVENT: Final[str] = "bell"
 BELL_INSTRUCTION: Final[str] = (
-    "Explain the brass bell signals danger; nobody else enters the scene."
+    "Describe the brass alarm bell on the desk; it signals danger but has not been rung by this inspection."
 )
 BELL_FALLBACK: Final[str] = (
-    "That bell signals trouble on the water. I'd rather leave it silent tonight."
+    "The brass alarm bell stands on the desk, ready to signal danger on the water. You examine it without ringing it."
 )
 
 
@@ -102,10 +102,10 @@ CHAT_FALLBACK: Final[str] = (
 
 WON_EVENT: Final[str] = "won"
 WON_INSTRUCTION: Final[str] = (
-    "Hand the brass key to the player; authorize the agreed rescue plan."
+    "Authorize the agreed rescue plan after handing over the key."
 )
 WON_FALLBACK: Final[str] = (
-    "Here's the brass key; take the rope and launch from the east steps. Bring "
+    "Take the rope and launch from the east steps. Bring "
     "yourself and my key back safely."
 )
 
@@ -121,8 +121,31 @@ LOST_FALLBACK: Final[str] = (
 
 TIMEOUT_EVENT: Final[str] = "timeout"
 TIMEOUT_INSTRUCTION: Final[str] = (
-    "End the encounter: the tide has closed the rescue window; keep the key."
+    "Describe the tide closing the rescue window; the key stays with Maren."
 )
 TIMEOUT_FALLBACK: Final[str] = (
-    "The tide has turned and the crossing is closed. I can't send you out now."
+    "The tide turns, closing the crossing before you can begin the rescue. The brass key remains with Maren."
 )
+
+
+UNSPOKEN_EVENT: Final[str] = "unspoken"
+UNSPOKEN_INSTRUCTION: Final[str] = (
+    "No physical action or explicit speech to Maren was established. Explain how to act or speak; "
+    "do not repeat private thoughts or make Maren respond to them."
+)
+UNSPOKEN_FALLBACK: Final[str] = (
+    'No action or spoken words reach Maren. Describe an action, address him with "Maren, ...", '
+    'or write "I say to Maren ..." to speak.'
+)
+TAKE_KEY_EVENT: Final[str] = "take_key"
+RING_BELL_EVENT: Final[str] = "ring_bell"
+ACTION_EVENTS: Final[frozenset[str]] = frozenset({
+    LEDGER_EVENT, KEY_EVENT, BELL_EVENT, TAKE_KEY_EVENT, RING_BELL_EVENT,
+})
+SPEECH_EVENTS: Final[frozenset[str]] = frozenset({
+    "ask_ledger", "ask_key", "ask_bell", PLAN_EVENT, REASSURE_EVENT,
+    REFUSE_EVENT, THREATEN_EVENT, CHAT_EVENT, WON_EVENT,
+})
+GUIDANCE_EVENTS: Final[frozenset[str]] = frozenset({
+    CLARIFY_EVENT, OFF_WORLD_EVENT, UNSPOKEN_EVENT,
+})

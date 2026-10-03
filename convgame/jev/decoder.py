@@ -5,7 +5,7 @@ from collections.abc import Collection
 
 from typesafe_sdk import ChoiceAnswer, SystemOneResponse
 
-from ..world import Decisions, Intent, Object, Pick
+from ..world import Action, Decisions, Intent, Object, Pick, Recipient
 from . import question_constants as constants
 
 
@@ -27,6 +27,9 @@ def decode(result: SystemOneResponse) -> Decisions:
     choices = result.choices
     tension = result.scores[constants.TENSION_QUESTION]
     return Decisions(
+        action=_pick(choices[constants.ACTION_QUESTION], constants.ACTION_QUESTION, set(Action)),
+        action_object=_pick(choices[constants.ACTION_OBJECT_QUESTION], constants.ACTION_OBJECT_QUESTION, set(Object)),
+        recipient=_pick(choices[constants.RECIPIENT_QUESTION], constants.RECIPIENT_QUESTION, set(Recipient)),
         intent=_pick(choices[constants.INTENT_QUESTION], constants.INTENT_QUESTION, set(Intent)),
         object=_pick(choices[constants.OBJECT_QUESTION], constants.OBJECT_QUESTION, set(Object)),
         off_world=_pick(

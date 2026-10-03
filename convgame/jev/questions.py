@@ -1,4 +1,4 @@
-"""Build the eight independent questions sent in a single request."""
+"""Build the independent action and speech questions sent in a single request."""
 
 from collections.abc import Mapping
 
@@ -24,6 +24,9 @@ def _probability(prompt: str) -> Noul:
 
 def questions() -> Questions:
     return {
+        constants.ACTION_QUESTION: _choice(constants.ACTION_PROMPT, constants.ACTION_CRITERIA),
+        constants.ACTION_OBJECT_QUESTION: _choice(constants.ACTION_OBJECT_PROMPT, constants.OBJECT_CRITERIA),
+        constants.RECIPIENT_QUESTION: _choice(constants.RECIPIENT_PROMPT, constants.RECIPIENT_CRITERIA),
         constants.INTENT_QUESTION: _choice(constants.INTENT_PROMPT, constants.INTENT_CRITERIA),
         constants.OBJECT_QUESTION: _choice(constants.OBJECT_PROMPT, constants.OBJECT_CRITERIA),
         constants.OFF_WORLD_QUESTION: _yes_no(constants.OFF_WORLD_PROMPT),

@@ -1,7 +1,7 @@
 [project]
 name = "convgame"
 version = "0.1.0"
-description = "A terminal conversation game: Jev decides, Bonsai speaks."
+description = "A terminal adventure: Jev interprets actions and speech, Bonsai narrates."
 requires-python = ">=3.11"
 dependencies = ["typesafe-sdk>=0.7.0,<0.8"]
 
@@ -17,4 +17,3 @@ dev = ["pytest>=8,<10"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

@@ -1,9 +1,10 @@
 """Apply encounter endings and explain unmet requirements for lending the key."""
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 
+from ..trace import record
 from . import directive_constants as constants
-from .directives import DIRECTIVES, Directive
+from .directives import DIRECTIVES, Directive, Speaker
 from .state import World
 
 
@@ -19,17 +20,44 @@ def refusal_dialogue(state: World) -> str:
     return f"The key stays with me for now. First, {request}."
 
 
-def finish_turn(state: World, event: str) -> tuple[World, Directive]:
+def finish_turn(state: World, events: tuple[str, ...]) -> tuple[World, Directive]:
     """Resolve a win before a loss or timeout, then choose the final directive."""
-    if event == constants.WON_EVENT:
+    if constants.WON_EVENT in events:
         state.key_given = True
         state.ending = constants.WON_EVENT
+        reason = "An authorized handover wins before checking loss or timeout."
     elif state.suspicion >= 0.9 or state.composure <= 0.1:
-        event = state.ending = constants.LOST_EVENT
+        state.ending = constants.LOST_EVENT
+        reason = "End the encounter because suspicion reached 0.9 or composure fell to 0.1; loss takes precedence over timeout."
     elif state.turn >= state.max_turns:
-        event = state.ending = constants.TIMEOUT_EVENT
+        state.ending = constants.TIMEOUT_EVENT
+        reason = "The turn limit was reached without an authorized handover."
+    else:
+        reason = "Continue: no handover, emotional ending, or turn limit was reached."
+    record("world.ending", reason, ending=state.ending, turn=state.turn,
+           max_turns=state.max_turns, suspicion=state.suspicion, composure=state.composure)
 
-    directive = DIRECTIVES[event]
-    if event == constants.REFUSE_EVENT:
-        directive = replace(directive, fallback=refusal_dialogue(state))
+    directives = [DIRECTIVES[event] for event in events]
+    if state.ending in (constants.LOST_EVENT, constants.TIMEOUT_EVENT):
+        # Retain physical outcomes, but the ending replaces pending conversation.
+        outcome_beats = tuple(
+            beat for directive in directives if directive.event in constants.ACTION_EVENTS
+            for beat in directive.beats if beat.speaker == Speaker.NARRATOR
+        )
+        ending = DIRECTIVES[state.ending]
+        directive = Directive(events + ending.events, outcome_beats + ending.beats)
+        record("world.directive", "The ending replaces pending conversation while retaining physical narration.",
+               directive=asdict(directive), after=state.snapshot())
+        return state, directive
+    if not directives:
+        directives = [DIRECTIVES[constants.UNSPOKEN_EVENT]]
+    beats = []
+    for directive in directives:
+        for beat in directive.beats:
+            if directive.event == constants.REFUSE_EVENT:
+                beat = replace(beat, fallback=refusal_dialogue(state))
+            beats.append(beat)
+    directive = Directive(tuple(event for directive in directives for event in directive.events), tuple(beats))
+    record("world.directive", "Choose ordered response beats from resolved events, or fixed unspoken guidance when no action or speech occurred.",
+           directive=asdict(directive), after=state.snapshot())
     return state, directive

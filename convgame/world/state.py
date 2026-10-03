@@ -13,6 +13,7 @@ class WorldSnapshot(TypedDict):
     ledger_read: bool
     plan_agreed: bool
     key_given: bool
+    bell_rung: bool
     ending: str
     history: list[dict[str, str]]
     ready_to_lend_key: bool
@@ -28,6 +29,7 @@ class World:
     ledger_read: bool = False
     plan_agreed: bool = False
     key_given: bool = False
+    bell_rung: bool = False
     ending: str = "playing"
     history: list[dict[str, str]] = field(default_factory=list)
 
@@ -50,6 +52,7 @@ class World:
             "ledger_read": self.ledger_read,
             "plan_agreed": self.plan_agreed,
             "key_given": self.key_given,
+            "bell_rung": self.bell_rung,
             "ending": self.ending,
             "history": [entry.copy() for entry in self.history[-6:]],
             "ready_to_lend_key": self.ready,

@@ -15,5 +15,10 @@ SCENE: Final[dict[str, str | dict[str, str]]] = {
     "rules": (
         "The player must read the ledger, agree to take a rope, use the east steps "
         "and return the key, then ask for the key. Python controls all state changes."
+        " Physical actions and explicit speech are separate: only actual inspection marks the ledger read, "
+        "only a promise spoken to Maren agrees the plan, and only a spoken request can obtain the key. "
+        "Taking the key without a handover is blocked. Maren cannot hear private thoughts. "
+        "The Narrator describes actions and observable outcomes; Maren speaks only when addressed "
+        "or when the rules select a reaction to a significant action."
     ),
 }

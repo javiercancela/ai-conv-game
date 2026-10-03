@@ -5,13 +5,30 @@ from enum import StrEnum
 
 
 class Intent(StrEnum):
-    INSPECT = "inspect"
+    """The purpose of explicit speech, independent of physical actions."""
+
+    NONE = "none"
+    ASK_ABOUT = "ask_about"
     REASSURE = "reassure"
     PERSUADE = "persuade"
     REQUEST = "request"
     THREATEN = "threaten"
     CHAT = "chat"
     UNCLEAR = "unclear"
+
+
+class Action(StrEnum):
+    NONE = "none"
+    INSPECT = "inspect"
+    TAKE_KEY = "take_key"
+    RING_BELL = "ring_bell"
+    UNCLEAR = "unclear"
+
+
+class Recipient(StrEnum):
+    NONE = "none"
+    MAREN = "maren"
+    UNKNOWN = "unknown"
 
 
 class Object(StrEnum):
@@ -30,6 +47,9 @@ class Pick:
 
 @dataclass(frozen=True)
 class Decisions:
+    action: Pick
+    action_object: Pick
+    recipient: Pick
     intent: Pick
     object: Pick
     off_world: Pick

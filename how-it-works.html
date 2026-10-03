@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>How The Last Crossing Works</title>
+  <style>
+    :root {
+      --ink: #17313d;
+      --muted: #536c73;
+      --paper: #f5f2e9;
+      --card: #fffdf7;
+      --line: #cbd6d1;
+      --sea: #137d83;
+      --sea-dark: #0d5962;
+      --foam: #e4f3ef;
+      --gold: #e7a444;
+      --gold-pale: #fff0cf;
+      --danger: #a95045;
+      --danger-pale: #f9e8e3;
+      --shadow: 0 14px 36px rgba(23, 49, 61, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 80% 2%, #d9ebe5 0, transparent 26rem),
+        linear-gradient(180deg, #f8f6ef 0, var(--paper) 28rem);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    a { color: var(--sea-dark); }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+    .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { font-size: .78rem; font-weight: 850; letter-spacing: .19em; text-transform: uppercase; }
+    .topbar nav { display: flex; gap: 18px; flex-wrap: wrap; }
+    .topbar nav a { font-size: .82rem; font-weight: 700; text-decoration: none; }
+    .topbar nav a:hover { text-decoration: underline; }
+    .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 42px; align-items: center; padding: 68px 0 48px; }
+    .eyebrow, .section-label { color: var(--sea-dark); font-size: .75rem; font-weight: 850; letter-spacing: .17em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 700; letter-spacing: -.045em; }
+    h1 { max-width: 12ch; margin: 14px 0 20px; font-size: clamp(3.3rem, 6vw, 5.9rem); line-height: .99; }
+    .lead { max-width: 50ch; color: var(--muted); font-size: 1.14rem; }
+    .hero-facts { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+    .pill { padding: 8px 13px; border: 1px solid var(--line); border-radius: 50px; background: #fff9; font-size: .82rem; font-weight: 750; }
+    .pill strong { color: var(--sea-dark); }
+    .scene {
+      overflow: hidden;
+      border: 1px solid #b6cbc5;
+      border-radius: 24px;
+      background: #e5f1ed;
+      box-shadow: var(--shadow);
+    }
+    .scene-head { display: flex; justify-content: space-between; gap: 12px; padding: 17px 20px 4px; font-size: .73rem; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+    .scene-head span:last-child { color: var(--sea-dark); }
+    .scene svg { display: block; width: 100%; height: auto; }
+    .scene-note { padding: 0 22px 20px; margin: 0; color: #3f6267; font-size: .82rem; }
+    section { padding: 55px 0; border-top: 1px solid var(--line); }
+    .section-top { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 28px; }
+    h2 { max-width: 15ch; margin: 9px 0 0; font-size: clamp(2.35rem, 4vw, 3.7rem); line-height: 1.05; }
+    .section-top p { max-width: 43ch; margin-bottom: 4px; color: var(--muted); }
+    .diagram-card { border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
+    .turn-flow { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; }
+    .flow-node { position: relative; min-height: 190px; padding: 24px 23px; }
+    .flow-node + .flow-node { border-left: 1px solid var(--line); }
+    .flow-node:not(:last-child)::after {
+      content: "→"; position: absolute; z-index: 1; top: 42px; right: -18px;
+      display: grid; place-items: center; width: 35px; height: 35px;
+      border: 1px solid var(--line); border-radius: 50%; background: var(--card);
+      color: var(--sea-dark); font-size: 1.2rem; font-weight: 700;
+    }
+    .flow-number { display: inline-grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: var(--sea-dark); color: white; font-size: .8rem; font-weight: 850; }
+    .flow-node h3 { margin: 16px 0 6px; font-size: 1.08rem; }
+    .flow-node p { color: var(--muted); font-size: .88rem; }
+    .flow-node strong { color: var(--ink); }
+    .rule-strip { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; margin-top: 14px; padding: 17px 22px; background: var(--ink); color: white; border-radius: 16px; }
+    .rule-strip span { color: #b9d6d4; font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .rule-strip strong { display: block; margin-top: 2px; font-size: .95rem; }
+    .rule-strip .divide { color: var(--gold); font-size: 1.6rem; }
+    .reactions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .reaction { padding: 24px; }
+    .reaction.good { border-top: 6px solid var(--sea); }
+    .reaction.bad { border-top: 6px solid var(--danger); }
+    .reaction .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .reaction h3 { margin: 0; font-size: 1.12rem; }
+    .reaction .example { margin: 11px 0 18px; color: var(--muted); font-size: .88rem; }
+    .reaction .arrows { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .reaction .arrows div { min-height: 82px; padding: 12px; border-radius: 12px; background: var(--foam); }
+    .reaction.bad .arrows div { background: var(--danger-pale); }
+    .reaction .arrows b { display: block; font-size: 1.35rem; line-height: 1; }
+    .reaction .arrows span { display: block; margin-top: 7px; font-size: .77rem; font-weight: 750; }
+    .reaction .arrows small { display: block; margin-top: 3px; font-size: .72rem; color: var(--muted); }
+    .reaction.good .arrows b { color: var(--sea-dark); }
+    .reaction.bad .arrows b { color: var(--danger); }
+    .dial-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 16px; padding: 24px; }
+    .dial .dial-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .dial b { font-size: .93rem; }
+    .dial small { color: var(--muted); font-size: .78rem; }
+    .track { position: relative; height: 13px; margin: 14px 0 8px; border-radius: 9px; background: #e9eeeb; }
+    .track::before { content: ""; display: block; height: 100%; width: var(--value); border-radius: inherit; background: var(--color); }
+    .track::after { content: ""; position: absolute; left: var(--threshold); top: -6px; height: 25px; width: 2px; background: var(--ink); }
+    .track .marker { position: absolute; left: var(--value); top: -5px; width: 2px; height: 23px; background: var(--ink); }
+    .dial .scale { display: flex; justify-content: space-between; color: var(--muted); font-size: .72rem; }
+    .dial .threshold-label { margin-top: 11px; color: var(--sea-dark); font-size: .77rem; font-weight: 800; }
+    .dial.danger .threshold-label { color: var(--danger); }
+    .route { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .route-step { position: relative; padding: 20px 19px 22px; }
+    .route-step:not(:last-child)::after { content: "→"; position: absolute; right: -17px; top: 48px; z-index: 2; display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; border: 1px solid var(--line); background: white; color: var(--sea-dark); font-weight: 800; }
+    .route-step .num { color: var(--sea-dark); font-size: .73rem; font-weight: 850; letter-spacing: .14em; }
+    .route-step h3 { min-height: 50px; margin: 12px 0 8px; font-size: 1.08rem; line-height: 1.15; }
+    .route-step p { min-height: 74px; margin-bottom: 15px; color: var(--muted); font-size: .84rem; }
+    .speech { display: block; padding: 11px 12px; border-radius: 11px 11px 11px 2px; background: var(--foam); color: var(--sea-dark); font-size: .79rem; font-weight: 700; }
+    .route-step:last-child { border-color: #d5ae67; background: #fffaf0; }
+    .route-step:last-child .speech { background: var(--gold-pale); color: #6c4b18; }
+    .gate { display: grid; grid-template-columns: 1fr auto 1.35fr; gap: 20px; align-items: center; margin-top: 16px; padding: 25px; background: var(--ink); border-radius: 19px; color: white; }
+    .gate-title { color: #accdca; font-size: .72rem; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
+    .gate h3 { margin: 7px 0 0; font-family: Georgia, serif; font-size: 1.65rem; line-height: 1.05; }
+    .gate .symbol { color: var(--gold); font-size: 2rem; }
+    .gate-conditions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .gate-conditions span { padding: 7px 10px; border: 1px solid #5c787b; border-radius: 8px; font-size: .78rem; font-weight: 720; }
+    .gate small { grid-column: 3; color: #b7d0d0; font-size: .77rem; }
+    .timing { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    .timing > div { padding: 20px 22px; }
+    .timing b { display: block; margin-bottom: 6px; }
+    .timing p { margin: 0; color: var(--muted); font-size: .85rem; }
+    .endings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .ending { padding: 22px; border-top: 6px solid var(--sea); }
+    .ending:nth-child(2) { border-top-color: var(--danger); }
+    .ending:nth-child(3) { border-top-color: var(--gold); }
+    .ending .icon { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 50%; background: var(--foam); color: var(--sea-dark); font-size: 1.3rem; font-weight: 850; }
+    .ending:nth-child(2) .icon { background: var(--danger-pale); color: var(--danger); }
+    .ending:nth-child(3) .icon { background: var(--gold-pale); color: #845e1e; }
+    .ending h3 { margin: 13px 0 4px; font-size: 1.1rem; }
+    .ending p { margin: 0; color: var(--muted); font-size: .86rem; }
+    footer { padding: 32px 0 48px; color: var(--muted); font-size: .78rem; }
+    footer .shell { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+    footer a { font-weight: 750; }
+    @media (max-width: 850px) {
+      .hero { grid-template-columns: 1fr; gap: 27px; padding-top: 45px; }
+      h1 { max-width: none; }
+      .turn-flow, .route { grid-template-columns: repeat(2, 1fr); }
+      .flow-node:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .flow-node:nth-child(4) { border-top: 1px solid var(--line); }
+      .flow-node:nth-child(2)::after { display: none; }
+      .route-step:nth-child(2)::after { display: none; }
+      .dial-panel { gap: 16px; }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 26px, 1180px); }
+      .topbar { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .topbar nav { gap: 12px; }
+      .hero { padding-top: 36px; }
+      h1 { font-size: clamp(3rem, 14vw, 4.6rem); }
+      section { padding: 43px 0; }
+      .section-top { display: block; }
+      .section-top p { margin: 13px 0 0; }
+      .turn-flow, .reactions, .dial-panel, .route, .timing, .endings { grid-template-columns: 1fr; }
+      .flow-node { min-height: 0; }
+      .flow-node + .flow-node, .flow-node:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .flow-node:not(:last-child)::after { top: auto; right: 21px; bottom: -18px; transform: rotate(90deg); }
+      .flow-node:nth-child(2)::after { display: grid; }
+      .route-step h3, .route-step p { min-height: 0; }
+      .route-step:not(:last-child)::after { display: grid; top: auto; right: 20px; bottom: -21px; transform: rotate(90deg); }
+      .gate { grid-template-columns: 1fr; gap: 10px; }
+      .gate .symbol { display: none; }
+      .gate small { grid-column: auto; }
+      .rule-strip { grid-template-columns: 1fr; gap: 6px; }
+      .rule-strip .divide { display: none; }
+    }
+    @media print {
+      :root { --shadow: none; }
+      body { background: white; }
+      .shell { width: 100%; }
+      .topbar nav { display: none; }
+      .hero { padding-top: 30px; }
+      section { break-inside: avoid; padding: 28px 0; }
+      .diagram-card, .scene, .gate, .rule-strip { box-shadow: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar shell">
+    <div class="brand">The Last Crossing <span aria-hidden="true">✦</span> Field Guide</div>
+    <nav aria-label="On this page">
+      <a href="#plot">Plot</a>
+      <a href="#turn">A turn</a>
+      <a href="#reactions">Maren's reactions</a>
+      <a href="#win">Winning</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero shell" id="plot">
+      <div>
+        <div class="eyebrow">One storm · your actions and words · one key</div>
+        <h1>How the game works</h1>
+        <p class="lead">A traveler is stranded beyond the harbor wall. You have twelve turns to act and speak to Maren, the harbor-master, and persuade him to lend you the brass key to the rescue skiff locker.</p>
+        <div class="hero-facts" aria-label="At a glance">
+          <span class="pill"><strong>Goal</strong> · borrow the key</span>
+          <span class="pill"><strong>Place</strong> · harbor office</span>
+          <span class="pill"><strong>Clock</strong> · 12 turns</span>
+        </div>
+      </div>
+      <div class="scene" role="img" aria-label="Scene map: Maren holds the key in the harbor office. The ledger gives the route and safety plan. The key opens the skiff locker for a rescue beyond the harbor wall.">
+        <div class="scene-head"><span>Scene map</span><span>Stormbound harbor</span></div>
+        <svg viewBox="0 0 700 405" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <pattern id="waves" width="33" height="20" patternUnits="userSpaceOnUse"><path d="M0 13 Q8 5 16 13 T33 13" fill="none" stroke="#90beb9" stroke-width="2" opacity=".55"/></pattern>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#137d83" stroke-width="1.6"/></marker>
+          </defs>
+          <rect x="0" y="0" width="700" height="405" fill="#e5f1ed"/>
+          <rect x="0" y="238" width="700" height="167" fill="#b8d9d4"/>
+          <rect x="0" y="238" width="700" height="167" fill="url(#waves)"/>
+          <path d="M0 221 H700" stroke="#17313d" stroke-width="14" stroke-dasharray="9 7"/>
+          <text x="526" y="211" fill="#536c73" font-size="13" font-weight="800" letter-spacing="2">HARBOR WALL</text>
+          <rect x="28" y="25" width="385" height="170" rx="17" fill="#fffdf7" stroke="#789b96" stroke-width="2"/>
+          <text x="47" y="52" fill="#536c73" font-size="12" font-weight="800" letter-spacing="2">HARBOR OFFICE</text>
+          <circle cx="113" cy="108" r="26" fill="#17313d"/>
+          <path d="M75 173 Q77 128 113 128 Q149 128 151 173" fill="#17313d"/>
+          <text x="74" y="187" fill="#17313d" font-size="16" font-weight="800">MAREN</text>
+          <rect x="193" y="83" width="113" height="74" rx="7" fill="#e8c791" stroke="#805e32" stroke-width="2"/>
+          <path d="M249 90 V150 M201 99 H240 M258 99 H298 M201 116 H240 M258 116 H298 M201 133 H240 M258 133 H298" stroke="#a27b46" stroke-width="2"/>
+          <text x="200" y="181" fill="#17313d" font-size="15" font-weight="800">TIDE LEDGER</text>
+          <circle cx="351" cy="108" r="22" fill="#e7a444" stroke="#805e32" stroke-width="2"/>
+          <rect x="346" y="128" width="10" height="15" fill="#805e32"/>
+          <text x="331" y="181" fill="#17313d" font-size="15" font-weight="800">BELL</text>
+          <circle cx="150" cy="132" r="6" fill="#e7a444" stroke="#805e32" stroke-width="2"/>
+          <path d="M150 137 V153 M150 148 H160" stroke="#e7a444" stroke-width="4" stroke-linecap="round"/>
+          <rect x="473" y="69" width="175" height="106" rx="12" fill="#fff7e7" stroke="#b89a69" stroke-width="2"/>
+          <path d="M493 123 L521 103 L550 123 L578 103 L610 123" fill="none" stroke="#137d83" stroke-width="4"/>
+          <text x="489" y="149" fill="#17313d" font-size="14" font-weight="800">SKIFF LOCKER</text>
+          <path d="M412 123 H458" stroke="#137d83" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+          <text x="428" y="104" fill="#137d83" font-size="12" font-weight="800">KEY</text>
+          <path d="M503 282 Q547 310 587 282 L574 303 H518 Z" fill="#17313d"/>
+          <path d="M545 282 V250 M545 250 L572 274" fill="none" stroke="#17313d" stroke-width="3"/>
+          <path d="M110 312 C241 355 357 351 488 294" fill="none" stroke="#137d83" stroke-width="3" stroke-dasharray="7 7" marker-end="url(#arrow)"/>
+          <text x="195" y="330" fill="#0d5962" font-size="14" font-weight="800">SHELTERED EAST STEPS</text>
+          <circle cx="92" cy="290" r="12" fill="#e7a444"/>
+          <path d="M92 303 V334 M92 314 L73 329 M92 314 L111 329" stroke="#17313d" stroke-width="5" stroke-linecap="round"/>
+          <text x="38" y="369" fill="#17313d" font-size="15" font-weight="800">STRANDED TRAVELER</text>
+        </svg>
+        <p class="scene-note">The setting, characters, objects, and rescue objective are fixed. Your actions and spoken words determine how the encounter develops.</p>
+      </div>
+    </div>
+
+    <section id="turn">
+      <div class="shell">
+        <div class="section-top">
+          <div><div class="section-label">The conversation engine</div><h2>What happens in one turn</h2></div>
+          <p>Describe an action or explicitly speak to Maren. The Narrator explains outcomes; Maren speaks when addressed or when an action provokes a response.</p>
+        </div>
+        <div class="turn-flow diagram-card" aria-label="Turn flow">
+          <div class="flow-node"><span class="flow-number">1</span><h3>You act or speak</h3><p>Act with <strong>I read the ledger.</strong> Speak with <strong>Maren, can I borrow the key?</strong> Private thoughts stay unspoken.</p></div>
+          <div class="flow-node"><span class="flow-number">2</span><h3>Jev interprets</h3><p>It separates physical actions from explicitly addressed speech, then identifies commitments, requests, and observable emotional signals.</p></div>
+          <div class="flow-node"><span class="flow-number">3</span><h3>Python decides</h3><p>Confidence checks and game rules update flags and emotional dials, or ask for clarification.</p></div>
+          <div class="flow-node"><span class="flow-number">4</span><h3>The scene responds</h3><p>Bonsai writes the Narrator and character voices selected by the rules. Reading the ledger needs narration alone.</p></div>
+        </div>
+        <div class="rule-strip" aria-label="Story and rules distinction">
+          <div><span>Defined plot</span><strong>Fixed storm, rescue, objects, and goal</strong></div>
+          <div class="divide" aria-hidden="true">+</div>
+          <div><span>Changing story</span><strong>Your choices, Maren's dials, and dialogue</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reactions">
+      <div class="shell">
+        <div class="section-top">
+          <div><div class="section-label">Character reactions</div><h2>Maren remembers the tone</h2></div>
+          <p>Three tracked dials influence the encounter. Their starting positions are shown below; <code>/status</code> reveals their current values while playing.</p>
+        </div>
+        <div class="reactions">
+          <div class="reaction good diagram-card">
+            <div class="header"><h3>Reassure and cooperate</h3><span aria-hidden="true">↗</span></div>
+            <p class="example">Explicitly address Maren to apologize, reassure him, or promise a responsible rescue plan. A private intention is not a promise he hears.</p>
+            <div class="arrows">
+              <div><b>↑</b><span>Trust</span><small>more likely to lend</small></div>
+              <div><b>↓</b><span>Suspicion</span><small>less wary</small></div>
+              <div><b>↑</b><span>Composure</span><small>if tension stays low</small></div>
+            </div>
+          </div>
+          <div class="reaction bad diagram-card">
+            <div class="header"><h3>Threaten or push</h3><span aria-hidden="true">↘</span></div>
+            <p class="example">Intimidation or a forceful grab makes Maren wary; tense words can shake his composure.</p>
+            <div class="arrows">
+              <div><b>↓</b><span>Trust</span><small>harder to persuade</small></div>
+              <div><b>↑</b><span>Suspicion</span><small>may end the talk</small></div>
+              <div><b>↓</b><span>Composure</span><small>tension takes a toll</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="dial-panel diagram-card" aria-label="Initial values and important thresholds">
+          <div class="dial">
+            <div class="dial-top"><b>Trust</b><small>starts at 35%</small></div>
+            <div class="track" style="--value:35%;--threshold:55%;--color:#137d83"><span class="marker"></span></div>
+            <div class="scale"><span>0%</span><span>100%</span></div>
+            <div class="threshold-label">Reach at least 55% to win</div>
+          </div>
+          <div class="dial danger">
+            <div class="dial-top"><b>Suspicion</b><small>starts at 20%</small></div>
+            <div class="track" style="--value:20%;--threshold:65%;--color:#a95045"><span class="marker"></span></div>
+            <div class="scale"><span>0%</span><span>100%</span></div>
+            <div class="threshold-label">Keep below 65% to win · 90% ends the talk</div>
+          </div>
+          <div class="dial danger">
+            <div class="dial-top"><b>Composure</b><small>starts at 80%</small></div>
+            <div class="track" style="--value:80%;--threshold:10%;--color:#e7a444"><span class="marker"></span></div>
+            <div class="scale"><span>0%</span><span>100%</span></div>
+            <div class="threshold-label">10% or lower ends the talk</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="win">
+      <div class="shell">
+        <div class="section-top">
+          <div><div class="section-label">The route to the key</div><h2>Four moves to a win</h2></div>
+          <p>The key request is its own step. Build the case first, then ask clearly while Maren is still willing.</p>
+        </div>
+        <div class="route" aria-label="Winning route">
+          <div class="route-step diagram-card"><span class="num">01 / DISCOVER</span><h3>Read the tide ledger</h3><p>Learn that the east steps are sheltered. The Narrator describes what you read; asking Maren about it does not count.</p><span class="speech">I read the ledger.</span></div>
+          <div class="route-step diagram-card"><span class="num">02 / COMMIT</span><h3>Agree to all three safety steps</h3><p>Tell Maren you'll take a rope, use the east steps, and return the key. This records <strong>plan agreed</strong>.</p><span class="speech">Maren, I'll take a rope, use the east steps, and bring the key back.</span></div>
+          <div class="route-step diagram-card"><span class="num">03 / REASSURE</span><h3>Earn Maren's trust</h3><p>Get trust to at least 55%, keep suspicion below 65%, and avoid escalating tension.</p><span class="speech">Maren, I want to bring them home safely.</span></div>
+          <div class="route-step diagram-card"><span class="num">04 / REQUEST</span><h3>Ask for the key</h3><p>Once ready, explicitly ask Maren for the brass key. Reaching for it without permission is blocked.</p><span class="speech">Maren, please lend me the key.</span></div>
+        </div>
+        <div class="gate">
+          <div><span class="gate-title">The handover gate</span><h3>Ready before you ask</h3></div>
+          <div class="symbol" aria-hidden="true">→</div>
+          <div class="gate-conditions"><span>Ledger read ✓</span><span>Plan agreed ✓</span><span>Trust ≥ 55%</span><span>Suspicion &lt; 65%</span><span>Clear peaceful request ✓</span></div>
+          <small>Readiness is checked both before and after the request. Completing the plan in the same line as the key request cannot win that turn.</small>
+        </div>
+        <div class="timing">
+          <div class="diagram-card"><b>⌛ What uses a turn?</b><p>Each evaluated line, including unclear or off-world remarks. You get 12 turns; an early key request can be refused.</p></div>
+          <div class="diagram-card"><b>↺ What is free?</b><p><code>/look</code>, <code>/status</code>, <code>/help</code>, and <code>/quit</code>. Use <code>/status</code> to track the gates.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="endings">
+      <div class="shell">
+        <div class="section-top">
+          <div><div class="section-label">Possible endings</div><h2>Where the conversation leads</h2></div>
+          <p>The game rules choose the ending. Narration and character dialogue reflect it; generated words cannot award the key.</p>
+        </div>
+        <div class="endings">
+          <div class="ending diagram-card"><div class="icon" aria-hidden="true">✓</div><h3>Key received</h3><p>Meet every handover condition and ask before the window closes. The rescue can begin.</p></div>
+          <div class="ending diagram-card"><div class="icon" aria-hidden="true">!</div><h3>Maren ends the talk</h3><p>Suspicion reaches 90%, or composure falls to 10% or less. The key stays with him.</p></div>
+          <div class="ending diagram-card"><div class="icon" aria-hidden="true">⌛</div><h3>Tide closes the crossing</h3><p>Reach turn 12 without winning or losing. There is no time left for the rescue.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell"><span>Based on the game's scene and world rules.</span><span><a href="README.md">Play instructions</a> · <a href="#plot">Back to the scene ↑</a></span></div>
+  </footer>
+</body>
+</html>
