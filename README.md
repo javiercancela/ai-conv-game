@@ -3,6 +3,8 @@
 A small terminal conversation game for one player and one NPC. Convince Maren,
 a wary harbor-master, to lend you a rescue key before the tide turns. No graphics.
 
+[Visual guide to the plot, Maren's reactions, and the path to the key](how-it-works.html).
+
 ## Play
 
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
