@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ConvGame — Proposal for observing the water</title>
+  <style>
+    :root { --ink:#18343d; --muted:#52666e; --sea:#126d75; --line:#d3dedb; --paper:#f6f4ee; --card:#fffefa; --foam:#e9f3ef; --rust:#944c3f; --sand:#f6e9cd; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:var(--sea); text-underline-offset:3px; }
+    a:focus-visible,summary:focus-visible { outline:3px solid #b27b25; outline-offset:4px; }
+    .wrap { max-width:1120px; padding:0 32px; margin:auto; }
+    header { background:var(--ink); color:white; padding:28px 0 54px; }
+    .masthead { display:flex; justify-content:space-between; gap:20px; padding-bottom:23px; border-bottom:1px solid #52676c; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
+    .masthead span:last-child { color:#bfd4d2; }
+    .hero { display:grid; grid-template-columns:1.5fr 1fr; gap:42px; align-items:center; margin-top:39px; }
+    .eyebrow { font-size:12px; letter-spacing:.12em; text-transform:uppercase; font-weight:750; color:var(--sea); }
+    header .eyebrow { color:#b7d9d2; }
+    h1,h2 { font-family:Georgia,"Times New Roman",serif; line-height:1.12; letter-spacing:-.025em; }
+    h1 { font-size:clamp(36px,5vw,58px); max-width:14ch; margin:10px 0 22px; }
+    h2 { font-size:31px; margin:7px 0 20px; }
+    h3 { font-size:19px; line-height:1.35; margin:0 0 9px; }
+    p { margin:0 0 15px; }
+    header .lead { color:#dae6e3; max-width:58ch; font-size:18px; }
+    .quote-card { padding:27px; border:1px solid #67878a; border-radius:12px; background:#21444d; }
+    .quote-card .command { display:block; font-size:18px; padding:5px 0; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .quote-card .arrow { margin:14px 0; color:#9fc6bd; }
+    .quote-card .outcome { border-top:1px solid #67878a; padding-top:16px; font-size:15px; color:#e0ebe6; }
+    nav { display:flex; flex-wrap:wrap; gap:11px 25px; padding:18px 0; border-bottom:1px solid var(--line); font-size:14px; font-weight:650; }
+    nav a { text-decoration:none; }
+    main { padding-bottom:48px; }
+    section { padding:38px 0; border-bottom:1px solid var(--line); scroll-margin-top:20px; }
+    .intro { font-size:18px; max-width:85ch; }
+    .note { background:var(--foam); border-left:4px solid var(--sea); padding:17px 21px; border-radius:0 8px 8px 0; }
+    .note.warning { background:var(--sand); border-color:#b27b25; }
+    .note p:last-child,.card p:last-child { margin-bottom:0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:22px 0; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:23px; }
+    .card .label { display:block; font-size:11px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .evidence { font-size:13px; color:var(--muted); margin:12px 0 0; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:10px; margin:20px 0; background:var(--card); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th { background:#edf2ee; text-align:left; font-weight:700; }
+    th,td { padding:13px 16px; vertical-align:top; border-bottom:1px solid var(--line); }
+    tr:last-child td { border-bottom:none; }
+    caption { text-align:left; padding:14px 16px; font-weight:700; }
+    code { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.88em; overflow-wrap:anywhere; }
+    pre { background:#18343d; color:#e3eee9; padding:20px; border-radius:9px; overflow:auto; font-size:13px; line-height:1.6; white-space:pre; }
+    pre code { font-size:inherit; overflow-wrap:normal; }
+    .flow { display:grid; grid-template-columns:repeat(4,1fr); gap:13px; margin:23px 0; }
+    .flow div { border:1px solid var(--line); background:var(--card); border-radius:10px; padding:18px; }
+    .flow strong { display:block; margin-bottom:8px; font-size:15px; }
+    .flow p { margin:0; color:var(--muted); font-size:13px; }
+    .flow .stop { border-top:4px solid var(--rust); }
+    .flow .skip { background:#eceeeb; }
+    .step { display:grid; grid-template-columns:42px 1fr; gap:17px; padding:23px 0; border-top:1px solid var(--line); }
+    .step:first-of-type { border-top:0; }
+    .number { width:34px; height:34px; display:grid; place-items:center; background:var(--sea); color:white; border-radius:50%; font-size:14px; font-weight:750; }
+    .step p:last-child { margin-bottom:0; }
+    ul,ol { padding-left:23px; }
+    li { padding-left:3px; margin:7px 0; }
+    .sample { background:var(--foam); border:1px solid #bbd5cd; border-radius:9px; padding:18px 22px; margin:18px 0; }
+    .sample strong { color:var(--sea); }
+    details { margin:20px 0 0; padding:16px 20px; background:var(--card); border:1px solid var(--line); border-radius:9px; }
+    summary { cursor:pointer; font-weight:650; }
+    details[open] summary { margin-bottom:17px; }
+    footer { padding:24px 0 35px; color:var(--muted); font-size:13px; }
+    .status { display:inline-block; padding:3px 9px; margin-right:6px; background:var(--foam); color:var(--sea); border-radius:4px; font-size:12px; font-weight:750; }
+    @media(max-width:760px) { .wrap { padding:0 20px; } .hero,.grid { grid-template-columns:1fr; gap:23px; } .flow { grid-template-columns:1fr 1fr; } header { padding-bottom:32px; } h1 { max-width:18ch; } .masthead { flex-direction:column; gap:5px; } th,td { padding:11px 12px; } }
+    @media(max-width:430px) { .flow { grid-template-columns:1fr; } .step { grid-template-columns:30px 1fr; gap:12px; } .number { width:29px; height:29px; } }
+    @media print { body { background:white; font-size:11pt; } header { background:white; color:var(--ink); padding:0 0 20px; } header .lead,header .eyebrow,.masthead span:last-child { color:var(--muted); } .quote-card { background:white; color:var(--ink); border-color:var(--line); } .quote-card .outcome,.quote-card .arrow { color:var(--muted); } nav { display:none; } .wrap { max-width:none; padding:0; } section { padding:22px 0; } .card,.flow div,.step,.sample,tr { break-inside:avoid; } h2,h3 { break-after:avoid; } pre { white-space:pre-wrap; background:#f0f2ef; color:var(--ink); } a { color:inherit; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="masthead"><span>ConvGame / The Last Crossing</span><span>Diagnosis &amp; proposal · 3 October 2026 · No implementation changes</span></div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Player observation</div>
+          <h1>Let the player look at the water.</h1>
+          <p class="lead">Both command forms should resolve to the same observation. The current pipeline can describe only three named objects, so a clear request about scenery becomes a clarification.</p>
+        </div>
+        <div class="quote-card">
+          <span class="command">Look at the water</span>
+          <span class="command">I look at the water</span>
+          <div class="arrow" aria-hidden="true">↓ Same canonical action</div>
+          <div class="outcome"><strong>Proposed:</strong> <code>inspect → water</code><br>A Narrator description grounded in the scene, with atmospheric variation when detailed facts are absent.</div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="wrap">
+    <nav aria-label="Report sections"><a href="#finding">Finding</a><a href="#evidence">Session evidence</a><a href="#proposal">Recommended changes</a><a href="#contract">Response contract</a><a href="#validation">Validation</a></nav>
+    <main>
+      <section id="finding">
+        <div class="eyebrow">01 / Diagnosis</div>
+        <h2>The observation vocabulary is too narrow.</h2>
+        <p class="intro">Add a supported path for observing scenery from interpretation through narration. The issue spans the scene data, target choices, validation, and directive selection; editing the wording of the clarification would leave the underlying failure intact.</p>
+        <div class="grid">
+          <article class="card">
+            <span class="label">Confirmed in the current code</span>
+            <h3>Water cannot be represented.</h3>
+            <p>The scene lists only <code>key</code>, <code>ledger</code>, and <code>bell</code>. Jev is told that an inspection examines those three objects, and that an unsupported physical action is <code>unclear</code>. The target enum and decoder also admit only those objects, <code>none</code>, and <code>unknown</code>.</p>
+            <p class="evidence">Sources: <a href="convgame/jev/scene_constants.py">scene_constants.py:6–23</a>; <a href="convgame/jev/question_constants.py">question_constants.py:35–52, 87–93</a>; <a href="convgame/world/decisions.py">decisions.py:37–43</a>; <a href="convgame/jev/decoder.py">decoder.py:21–34</a>.</p>
+          </article>
+          <article class="card">
+            <span class="label">Confirmed in the trace and replay</span>
+            <h3>The narrator never gets a description task.</h3>
+            <p>Python rejects the interpretation before resolving an action. It selects the scripted <code>clarify</code> directive, and Bonsai returns its fixed fallback without a generation request. This was neither a Bonsai outage nor a generated refusal.</p>
+            <p class="evidence">Sources: <a href="convgame/world/validation.py">validation.py:18–24</a>; <a href="convgame/world/turn.py">turn.py:21–23</a>; <a href="convgame/bonsai.py">bonsai.py:110–120</a>; <a href="logs/convgame.log">convgame.log:345–384, 698–743</a>.</p>
+          </article>
+        </div>
+        <div class="note"><p><strong>Scope of the conclusion.</strong> The two Jev outputs differ, but both fail at the same validation gate. The missing supported target is a structural defect. Prompt changes may improve model classification, but these two samples do not establish a general grammatical bias against imperative or first-person commands.</p></div>
+      </section>
+
+      <section id="evidence">
+        <div class="eyebrow">02 / Last recorded session</div>
+        <h2>Two turns, one blocked path.</h2>
+        <p>The log contains session <code>e5986710888342909bae9e0a1a97ef57</code>. Its actual order is first person, then imperative. The requested model was <code>jev-latest</code>; the response identifies <code>jev-1.13.0</code>.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Recorded decisions · confidence floor 0.60 · timestamps in UTC</caption>
+            <thead><tr><th scope="col">Turn / input time</th><th scope="col">Player input</th><th scope="col">Action / confidence</th><th scope="col">Target / confidence</th><th scope="col">Outcome</th></tr></thead>
+            <tbody>
+              <tr><td>1 · 21:42:43.538</td><td><code>I look at the water</code></td><td><code>none</code> / 0.50</td><td><code>none</code> / 0.88</td><td>Below the action floor → <code>clarify</code></td></tr>
+              <tr><td>2 · 21:43:10.890</td><td><code>Look at the water</code></td><td><code>unclear</code> / 0.39</td><td><code>none</code> / 0.71</td><td>Unclear action and below floor → <code>clarify</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Both turns classify the speech recipient and spoken intent as <code>none</code> with confidence 1.0. That fits an unspoken observation. Both consume one turn; trust, suspicion, composure, and objective flags remain unchanged.</p>
+        <div class="flow" aria-label="Current failure path">
+          <div><strong>1. Player looks</strong><p>A clear observation of water reaches Jev.</p></div>
+          <div><strong>2. No valid target</strong><p>The supplied choices describe only three objects.</p></div>
+          <div class="stop"><strong>3. Python clarifies</strong><p>The action fails validation before any description is resolved.</p></div>
+          <div class="skip"><strong>4. Bonsai is skipped</strong><p>The Narrator prints “Your intention is unclear.”</p></div>
+        </div>
+        <p class="evidence">Log anchors: input lines 75 and 410; Jev answers 207–240 and 554–584; validation 345–348 and 698–701; skipped generation 379–381 and 738–740; final responses 384 and 743.</p>
+        <div class="note warning"><p><strong>There is another gap after interpretation.</strong> A controlled probe with <code>inspect / water</code> bypassing the decoder reaches <code>DIRECTIVES["water"]</code> and raises <code>KeyError</code>. Through the normal decoder, the same target raises <code>ValueError</code> first. A complete fix must cover both boundaries.</p></div>
+      </section>
+
+      <section id="proposal">
+        <div class="eyebrow">03 / Proposed implementation</div>
+        <h2>A small observation path with shared scene data.</h2>
+        <p>Implement the following as one coherent change. Reuse the existing <code>inspect</code> action and quiet Narrator behavior. A full general-purpose action engine is unnecessary for this problem.</p>
+        <article class="step">
+          <div class="number" aria-hidden="true">1</div>
+          <div>
+            <h3>Define observable targets in the world layer.</h3>
+            <p>Introduce a small, network-free scene catalog, for example <code>convgame/world/scene.py</code>, containing the existing three objects plus <code>water</code>. Each entry needs a stable ID, aliases, visibility conditions, observable facts, a fallback description, and an optional existing mechanical effect.</p>
+            <p>Explicitly author whether the harbor water can be seen through the office window. The current scene mentions a storm and danger on the water, while Maren calls the water “ugly”; it does not define a visible water target or detailed water facts. Treat window visibility as proposed scene content, rather than an established fact from this log.</p>
+            <p>Build inspection choices and decoder allowlists from this same catalog. Keep the spoken <code>object</code> question separate: expanding its current shared enum would also permit <code>ask_water</code> and other events that have no directive. Scenic observations should not accidentally become item requests.</p>
+            <p class="evidence">Change locations: <a href="convgame/jev/scene_constants.py">scene_constants.py</a>, <a href="convgame/jev/questions.py">questions.py:25–31</a>, <a href="convgame/jev/decoder.py">decoder.py</a>, <a href="convgame/world/decisions.py">decisions.py</a>. Only the inspection target needs the broader set of IDs.</p>
+          </div>
+        </article>
+        <article class="step">
+          <div class="number" aria-hidden="true">2</div>
+          <div>
+            <h3>Make the two literal forms deterministic.</h3>
+            <p>Add a narrow whole-line recognizer at the interpretation boundary for plain, unquoted observations of registered targets: <code>Look at &lt;target&gt;</code> and <code>I look at &lt;target&gt;</code>, with case, surrounding whitespace, an optional article, and final punctuation normalized. Both produce the canonical observation shown below, with no speech or emotional signal.</p>
+            <p>Use this local path only for complete matches to catalog aliases. Inputs addressed to Maren, quoted speech, private thoughts, future plans, compound actions, and additional clauses still go through Jev. Do not globally strip “I”, or override uncertain arbitrary model output based on a substring match.</p>
+            <p>Broaden Jev’s inspection criteria to registered observable scenery as well as objects, and add paired examples for richer wording. Explicitly distinguish <code>Look at the water</code> from <code>Maren, look at the water</code> and <code>I think about looking at the water</code>. Retain confidence checks for model-interpreted commands.</p>
+            <p class="evidence">Change locations: <a href="convgame/jev/decider.py">decider.py:27–43</a>, <a href="convgame/jev/question_constants.py">question_constants.py:20–59</a>. This proposal gives plain observations zero Jev calls; other inputs retain one batched call. Update the current one-call documentation and log the local interpretation explicitly.</p>
+          </div>
+        </article>
+        <pre aria-label="Proposed canonical observation"><code>action          = inspect
+action_object   = water
+recipient       = none
+intent          = none
+off_world       = no
+rescue_plan     = no
+handover        = no</code></pre>
+        <article class="step">
+          <div class="number" aria-hidden="true">3</div>
+          <div>
+            <h3>Resolve scenery to a contextual Narrator directive.</h3>
+            <p>Validate that the inspection target belongs to the current catalog and is perceptible. Preserve existing ledger, key, and bell behavior. Route other registered targets to a reusable <code>inspect_scenery</code> directive carrying the resolved target and its allowed facts, rather than using every target ID as a key into <code>DIRECTIVES</code>.</p>
+            <p>Water inspection consumes one turn under the existing rules. It does not mark the ledger read, agree a plan, ring the bell, award the key, or change Maren’s mood. An unseen known target gets a concrete Narrator limitation; a missing or ambiguous referent gets a focused clarification. Unsupported actions should get a specific limitation where possible.</p>
+            <p>Add the new observation event to <code>ACTION_EVENTS</code> so a final-turn water description is retained before the timeout. Keep it out of <code>SPEECH_EVENTS</code> and <code>GUIDANCE_EVENTS</code>, so it is narrated without inventing player speech. Existing narrated-outcome memory can retain the response.</p>
+            <p class="evidence">Change locations: <a href="convgame/world/validation.py">validation.py</a>, <a href="convgame/world/actions.py">actions.py:46–64</a>, <a href="convgame/world/directives.py">directives.py</a>, <a href="convgame/world/directive_constants.py">directive_constants.py:142–150</a>, <a href="convgame/world/outcomes.py">outcomes.py:40–60</a>. Keep <a href="convgame/world/emotions.py">emotions.py:14–18</a> quiet-inspection behavior.</p>
+          </div>
+        </article>
+        <article class="step">
+          <div class="number" aria-hidden="true">4</div>
+          <div>
+            <h3>Supply facts first, then controlled atmosphere.</h3>
+            <p>Pass the resolved observation context to Bonsai even when <code>untrusted_player_line</code> is empty. The current empty field is appropriate for unspoken actions, but the new target and facts must travel in the authoritative directive or a dedicated observation payload.</p>
+            <p>Prefer explicit, currently observable scene facts. Where detailed facts are absent, select from authored atmospheric descriptions compatible with the target and storm setting; this allows generic random variation without inventing mechanics. Randomize presentation, never visibility, possession, route safety, or objective state.</p>
+            <p>Bonsai may phrase those supplied details within the existing speaker, sentence, and word limits. Keep a useful scripted observation fallback for service failures. Its current prompt forbids inventing facts, so supply permitted atmospheric details explicitly rather than expecting the model to improvise them against that instruction.</p>
+            <p class="evidence">Change locations: <a href="convgame/bonsai.py">bonsai.py:12–32, 115–128</a>, observation directive construction, and <a href="convgame/cli.py">cli.py:100–120</a> for fallback and logging integration. Existing structural output validation does not prove factual accuracy; supplied facts and constrained fallback text remain essential.</p>
+          </div>
+        </article>
+        <div class="note warning"><p><strong>Partial fixes to avoid.</strong> Lowering the 0.60 floor would turn the first logged <code>none</code> into unspoken guidance, while <code>unclear</code> would still block the second. Adding only a <code>water</code> enum or prompt example leaves the resolver and directive gaps. Sending rejected input directly to Bonsai leaves the target unresolved and lets prose imply unvalidated outcomes.</p></div>
+      </section>
+
+      <section id="contract">
+        <div class="eyebrow">04 / Expected player experience</div>
+        <h2>Describe what can be perceived.</h2>
+        <p>The following examples illustrate the proposed contract. They are new authored content, not quotations of water facts already present in the world definition.</p>
+        <div class="sample"><strong>With authored water facts:</strong><br>Narrator: Through the office window, you see the wind roughening the harbor water. Rain breaks across its dark surface.</div>
+        <div class="sample"><strong>With only a visible-water target and atmospheric fallback:</strong><br>Narrator: You watch the harbor water shift in the storm.</div>
+        <div class="sample"><strong>If authored visibility conditions prevent the view:</strong><br>Narrator: Rain obscures the harbor water beyond the window.</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Input / situation</th><th scope="col">Required behavior</th></tr></thead>
+            <tbody>
+              <tr><td><code>Look at the water</code><br><code>I look at the water</code></td><td>Identical canonical action and target; one Narrator observation per turn. Wording may vary.</td></tr>
+              <tr><td><code>Maren, look at the water</code><br><code>"Look at the water."</code></td><td>Explicit speech under the existing rules; it does not automatically make the player inspect water.</td></tr>
+              <tr><td><code>I think about looking at the water</code></td><td>Private thought; no performed observation or audible promise.</td></tr>
+              <tr><td><code>Look at it</code>, with two plausible referents</td><td>Ask which target the player means; do not pick one at random.</td></tr>
+              <tr><td>Clearly named but unseen registered target</td><td>Explain the perceptual limitation. Do not call the player’s intention unclear.</td></tr>
+              <tr><td>Target absent from the scene</td><td>Do not create it merely because it was named. Use a scene limitation or targeted clarification.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Keep observable facts distinct from secondhand dialogue. Maren’s “ugly” water remark is context, not a measurement. Looking at water must not reveal the ledger’s sheltered route advice unless that information is independently authored as perceptible there. Repeated descriptions may vary cosmetically while remaining compatible with established scene facts.</p>
+      </section>
+
+      <section id="validation">
+        <div class="eyebrow">05 / Evidence and acceptance criteria</div>
+        <h2>Verify the whole path from input to response.</h2>
+        <p><span class="status">Reproduced</span> Replayed both captured <code>Decisions</code> through the real CLI, world resolver, and <code>BonsaiNarrator</code>, with all network calls prohibited. Both printed the exact clarification. A smaller replay through <code>advance(World(), captured_decisions)</code> reproduced both results twice, without history or the CLI.</p>
+        <p><span class="status">Baseline green</span> <code>PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider</code> → <strong>73 passed in 0.12s</strong>. Existing tests cover supported inspections and ambiguous decisions, but do not assert that these raw water commands reach an observation response.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Tests proposed for the implementation</caption>
+            <thead><tr><th scope="col">Seam</th><th scope="col">Acceptance criterion</th></tr></thead>
+            <tbody>
+              <tr><td>Actual input interpretation</td><td>Both raw strings and capitalization/article/punctuation variants pass through the production recognizer and yield <code>inspect / water / no speech</code>. Addressed, quoted, private, and compound lines do not match the local path.</td></tr>
+              <tr><td>Jev request and decoder</td><td>Inspection choices are derived from the catalog and include water; a valid water answer decodes. Speech object choices retain their supported scope. Malformed or unregistered target IDs remain rejected.</td></tr>
+              <tr><td>World and directive</td><td>A water observation selects a Narrator beat, avoids <code>KeyError</code>, advances exactly one turn, and leaves emotions and objective flags unchanged. Existing ledger reading still sets its flag.</td></tr>
+              <tr><td>Narrator HTTP contract and failure</td><td>The payload contains canonical water context and allowed facts despite empty player speech. A Bonsai timeout or malformed response produces a water-description fallback, with no repeated action or extra Maren beat.</td></tr>
+              <tr><td>Visibility, ambiguity, and endings</td><td>Invisible targets get a limitation, ambiguous targets get a focused question, and turn 12 retains the observation before timeout. Scene inspection cannot grant the key or satisfy the rescue plan.</td></tr>
+              <tr><td>Two-turn CLI regression</td><td>Feed the two original strings through the production interpretation path and test narration. Assert two water observations and zero “Your intention is unclear” responses.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Use deterministic authored text or a seeded atmospheric selection in tests. Mock service transport, not the input interpretation being tested. Follow with a small live Jev evaluation for richer observation paraphrases; the offline replay confirms today’s failure but does not predict how revised prompts will change Jev’s confidence.</p>
+        <p><strong>Documentation and diagnostics:</strong> update <a href="README.md">README.md</a> and <a href="GLOSSARY.md">GLOSSARY.md</a> to include observation of scenery and the local interpretation exception. Log the interpretation source, normalized target, visibility decision, fact/fallback source, and selected event, using the existing trace facility. Existing logs already show the failure clearly; they do not need a redesign.</p>
+        <details>
+          <summary>Read-only reproduction command and captured result</summary>
+          <p>Run from the repository root. This parses the logged, validated decisions and exercises the actual world/directive seam; it intentionally fails the expected player-experience assertion on the current code. It writes no project files and calls no services.</p>
+          <pre><code>PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - &lt;&lt;'PY'
+import re
+from dataclasses import fields
+from pathlib import Path
+from convgame.world import Decisions, Pick, World, advance
+
+log = Path('logs/convgame.log').read_text()
+lines = re.findall(
+    r'\] turn.started:[^\n]*\n  player_line: ([^\n]+)', log)
+blocks = re.findall(
+    r'\] world.interpretation:[^\n]*\n  answers:\n(.*?)\n  before:',
+    log, re.S)
+assert len(lines) == len(blocks) == 2
+failures = []
+for line, block in zip(lines, blocks):
+    values = {}
+    for field in fields(Decisions):
+        match = re.search(
+            r'^    ' + field.name +
+            r':\n      value: (\S+)\n      confidence: ([\d.]+)',
+            block, re.M)
+        if match:
+            values[field.name] = Pick(match[1], float(match[2]))
+        else:
+            values[field.name] = float(re.search(
+                r'^    ' + field.name + r': ([\d.]+)',
+                block, re.M)[1])
+    _, directive = advance(World(), Decisions(**values))
+    text = '\n'.join(x.text for x in directive.fallback)
+    print(f'{line!r} → {directive.event}: {text}')
+    if 'Your intention is unclear' in text or 'water' not in text.lower():
+        failures.append(line)
+assert not failures, f'Expected water information; failed: {failures}'
+PY</code></pre>
+          <pre><code>'I look at the water' → clarify: Your intention is unclear. …
+'Look at the water' → clarify: Your intention is unclear. …
+AssertionError: Expected water information; failed:
+['I look at the water', 'Look at the water']</code></pre>
+          <p>The captured incorrect decisions are a historical diagnosis fixture. Once interpretation changes, the regression must run the raw strings through that new production path; replaying frozen old answers alone cannot verify the fix.</p>
+        </details>
+      </section>
+    </main>
+    <footer>Proposal only. Reviewed the current working tree, its domain glossary, and the supplied local log. Implementation and existing user edits were left unchanged. Source links are relative to this document in the repository root.</footer>
+  </div>
+</body>
+</html>

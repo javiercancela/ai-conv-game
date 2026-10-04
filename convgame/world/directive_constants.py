@@ -139,13 +139,15 @@ UNSPOKEN_FALLBACK: Final[str] = (
 )
 TAKE_KEY_EVENT: Final[str] = "take_key"
 RING_BELL_EVENT: Final[str] = "ring_bell"
+OBSERVATION_EVENT: Final[str] = "observation"
+MIXED_OBSERVATION_EVENT: Final[str] = "mixed_observation"
 ACTION_EVENTS: Final[frozenset[str]] = frozenset({
-    LEDGER_EVENT, KEY_EVENT, BELL_EVENT, TAKE_KEY_EVENT, RING_BELL_EVENT,
+    LEDGER_EVENT, KEY_EVENT, BELL_EVENT, TAKE_KEY_EVENT, RING_BELL_EVENT, OBSERVATION_EVENT,
 })
 SPEECH_EVENTS: Final[frozenset[str]] = frozenset({
     "ask_ledger", "ask_key", "ask_bell", PLAN_EVENT, REASSURE_EVENT,
     REFUSE_EVENT, THREATEN_EVENT, CHAT_EVENT, WON_EVENT,
 })
 GUIDANCE_EVENTS: Final[frozenset[str]] = frozenset({
-    CLARIFY_EVENT, OFF_WORLD_EVENT, UNSPOKEN_EVENT,
+    CLARIFY_EVENT, OFF_WORLD_EVENT, UNSPOKEN_EVENT, MIXED_OBSERVATION_EVENT,
 })

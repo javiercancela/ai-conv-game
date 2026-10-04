@@ -33,15 +33,21 @@ INTERPRETATION_INSTRUCTIONS: Final[str] = (
 )
 
 ACTION_PROMPT: Final[str] = (
-    "What physical action does the player attempt now, independently of spoken words? "
+    "What physical action or direct observation does the player attempt now, independently of spoken words? "
     "'I read the ledger' is an inspection; 'Maren, read the ledger' is only speech. "
     "A spoken or quoted claim such as 'Maren, I read the ledger' does not perform an inspection. "
-    "Choose none for thoughts, future plans, questions, or descriptions without an attempted action. "
+    "Choose observe for a bare sensory information question ('Are there clouds in the sky?', including typos) "
+    "or examining unlisted scenery. Descriptive attribute questions such as 'What color is the ledger?' "
+    "also use observe and never read its advice. Observe needs no registered object. "
+    "Addressed or quoted questions to Maren are speech only, not observe. "
+    "Choose none for private or imagined questions, thoughts, future plans, bare requests for possessions, "
+    "or descriptions without an attempted action. "
     "Choose unclear for an unsupported physical action or multiple separate physical actions."
 )
 ACTION_CRITERIA: Final[dict[str, str]] = {
     Action.NONE: "No physical action attempted now.",
     Action.INSPECT: "Physically examine or read the ledger, key, or bell; asking about one does not count.",
+    Action.OBSERVE: "Direct sensory information request or inspection of scenery, independent of explicit character speech.",
     Action.TAKE_KEY: "Try to grab, take, or steal the key from Maren; asking him to lend it does not count.",
     Action.RING_BELL: "Physically ring the brass alarm bell.",
     Action.UNCLEAR: "Ambiguous or unsupported physical action, or multiple distinct physical actions.",
@@ -49,7 +55,7 @@ ACTION_CRITERIA: Final[dict[str, str]] = {
 ACTION_OBJECT_PROMPT: Final[str] = (
     "Which scene object does the player's physical inspection target? Ignore objects only "
     "mentioned in speech or thought. Resolve pronouns from recent history when clear. "
-    "Choose none if there is no physical inspection."
+    "Choose none for observe, which resolves its own unlisted subject later, or if there is no physical inspection."
 )
 RECIPIENT_PROMPT: Final[str] = (
     "To whom does the player explicitly speak NOW? Use the explicit-speech rules above. "
@@ -59,7 +65,7 @@ RECIPIENT_PROMPT: Final[str] = (
     "utterance targets somebody absent or its addressee is ambiguous."
 )
 RECIPIENT_CRITERIA: Final[dict[str, str]] = {
-    Recipient.NONE: "No explicit speech to a character; actions and private thoughts alone.",
+    Recipient.NONE: "No explicit speech to a character; actions, bare observations, and private thoughts alone.",
     Recipient.MAREN: "Explicitly spoken words to Maren, the only other person present.",
     Recipient.UNKNOWN: "Explicit speech to an absent or ambiguous character.",
 }
@@ -70,7 +76,7 @@ INTENT_PROMPT: Final[str] = (
 )
 INTENT_CRITERIA: Final[dict[str, str]] = {
     Intent.NONE: "No explicit speech to Maren.",
-    Intent.ASK_ABOUT: "Ask Maren about a specific scene object.",
+    Intent.ASK_ABOUT: "Ask Maren about the key, ledger, or bell; use chat for scenery and other general questions.",
     Intent.REASSURE: "Calm Maren, apologize, or promise responsible behavior.",
     Intent.PERSUADE: "Explain a rescue plan or argue for cooperation.",
     Intent.REQUEST: "Verbally ask to borrow or receive a scene object, especially the key.",
@@ -89,7 +95,7 @@ OBJECT_CRITERIA: Final[dict[str, str]] = {
     Object.LEDGER: "The tide ledger or its pages.",
     Object.BELL: "The alarm bell.",
     Object.NONE: "No particular object referenced.",
-    Object.UNKNOWN: "Ambiguous referent or nonexistent object.",
+    Object.UNKNOWN: "Ambiguous or unlisted referent in speech; an unlisted subject is not proof of absence.",
 }
 
 YES_NO_CRITERIA: Final[dict[str, None]] = {"yes": None, "no": None}

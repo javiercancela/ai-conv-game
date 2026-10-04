@@ -20,7 +20,7 @@ def refusal_dialogue(state: World) -> str:
     return f"The key stays with me for now. First, {request}."
 
 
-def finish_turn(state: World, events: tuple[str, ...]) -> tuple[World, Directive]:
+def finish_turn(state: World, events: tuple[str, ...], observation: Directive | None = None) -> tuple[World, Directive]:
     """Resolve a win before a loss or timeout, then choose the final directive."""
     if constants.WON_EVENT in events:
         state.key_given = True
@@ -37,7 +37,8 @@ def finish_turn(state: World, events: tuple[str, ...]) -> tuple[World, Directive
     record("world.ending", reason, ending=state.ending, turn=state.turn,
            max_turns=state.max_turns, suspicion=state.suspicion, composure=state.composure)
 
-    directives = [DIRECTIVES[event] for event in events]
+    directives = [observation if event == constants.OBSERVATION_EVENT and observation else DIRECTIVES[event]
+                  for event in events]
     if state.ending in (constants.LOST_EVENT, constants.TIMEOUT_EVENT):
         # Retain physical outcomes, but the ending replaces pending conversation.
         outcome_beats = tuple(

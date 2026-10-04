@@ -10,23 +10,10 @@ import time
 
 from .bonsai import BonsaiNarrator
 from .trace import file_log, log_context, record
-from .world import World, advance
-
-
-INTRO = """
-THE LAST CROSSING
-
-Narrator: A storm rattles the harbor office. Maren stands behind a desk with a tide
-ledger and a brass alarm bell; the rescue skiff's key hangs from his belt.
-A traveler is stranded beyond the harbor wall. You have twelve turns
-to persuade Maren to lend you the key before the tide closes the crossing.
-
-Describe actions: I read the ledger.
-Speak explicitly: Maren, can I borrow the key? / I say to Maren, "I'll bring it back."
-The Narrator describes outcomes; characters speak when addressed or reacting.
-/look  /status  /help  /quit — commands don't use a turn.
-"""
-OPENING = "The water's ugly tonight, and I'm not losing another boat. Read the tide ledger if you mean to help."
+from .world import Action, World, advance
+from .world.scene import INTRO, OPENING
+from .world.validation import blocked_event
+from .observations import prepare_observation
 
 
 def status(world: World) -> str:
@@ -64,13 +51,15 @@ def play(decider, narrator, debug: bool = False, floor: float = 0.6) -> int:
             continue
         if command == "/look":
             record("input.command", "Describe the scene without using a turn.", command=command)
-            print("Narrator: Maren, the tide ledger, the alarm bell, and the brass rescue key. Rain lashes the office window.")
+            print(f"Narrator: {world.scene.look}")
             continue
         if command == "/help":
             record("input.command", "Show instructions without using a turn.", command=command)
             print("Describe actions such as 'I read the ledger'. To speak, address Maren, describe speaking\n"
                   "to him, or quote your spoken words. Private thoughts are not promises he can hear.\n"
                   "Read the ledger, tell Maren your safe rescue plan, earn his trust, then ask him for the key.\n"
+                  "Ask sensory questions such as 'Are there clouds in the sky?' directly to the Narrator.\n"
+                  "Use separate lines for observations and speech to Maren.\n"
                   "Use /status for progress, /look for objects, or /quit to leave.")
             continue
         if command.startswith("/"):
@@ -97,7 +86,23 @@ def play(decider, narrator, debug: bool = False, floor: float = 0.6) -> int:
                       "No turn used; check your API key/network and try again.", file=sys.stderr)
                 continue
             decided = time.perf_counter()
-            world, directive = advance(world, answers, floor)
+            observation = None
+            if answers.action.value == Action.OBSERVE and blocked_event(answers, floor) is None:
+                try:
+                    observation = prepare_observation(world, line, narrator)
+                except Exception as error:
+                    record("turn.cancelled", "Observation resolution failed before a commit; preserve the world and turn counter.",
+                           error_type=type(error).__name__, unchanged=world.snapshot())
+                    print(f"Bonsai could not resolve that observation ({type(error).__name__}). "
+                          "No turn used; check the local service and try again.", file=sys.stderr)
+                    continue
+            try:
+                world, directive = advance(world, answers, floor, observation=observation)
+            except ValueError as error:
+                record("turn.cancelled", "The prepared observation could not commit; preserve the original world.",
+                       error_type=type(error).__name__, unchanged=world.snapshot())
+                print("The observation could not be committed. No turn used; try again.", file=sys.stderr)
+                continue
             try:
                 reply = narrator.narrate(world, line, directive)
             except Exception as error:
@@ -143,8 +148,8 @@ def main() -> int:
     parser.add_argument("--bonsai-model", default=os.environ.get("BONSAI_CHAT_MODEL"))
     parser.add_argument("--jev-model", default=os.environ.get("TYPESAFE_DEFAULT_MODEL", "jev-latest"))
     parser.add_argument("--confidence", type=confidence, default=0.6, help="Action confidence floor (default: 0.6)")
-    parser.add_argument("--log-file", default="logs/convgame.jsonl",
-                        help="Append service calls and decision reasons to this JSON Lines file (default: logs/convgame.jsonl)")
+    parser.add_argument("--log-file", default="logs/convgame.log",
+                        help="Append service calls and decision reasons as readable text (default: logs/convgame.log)")
     args = parser.parse_args()
     # Open the log before checking services so startup failures are recorded too.
     with ExitStack() as stack:

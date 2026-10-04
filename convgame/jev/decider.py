@@ -8,7 +8,7 @@ from ..trace import record
 from ..world import Decisions, World
 from .decoder import decode
 from .questions import questions
-from .scene_constants import SCENE
+from ..world.scene import scene_context
 
 
 class JevDecider:
@@ -25,7 +25,8 @@ class JevDecider:
         self.client.close()
 
     def decide(self, world: World, line: str) -> Decisions:
-        state = {"scene": SCENE, "world": world.snapshot(), "player_line": line}
+        state = {"scene": scene_context(world.scene),
+                 "world": world.snapshot(), "player_line": line}
         record("jev.request", "Interpret this player line in one batched System One call.",
                operation="system_one", model=getattr(self, "model", None),
                state=state, questions={name: question.model_dump(mode="json")

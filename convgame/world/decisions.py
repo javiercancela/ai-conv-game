@@ -20,6 +20,7 @@ class Intent(StrEnum):
 class Action(StrEnum):
     NONE = "none"
     INSPECT = "inspect"
+    OBSERVE = "observe"
     TAKE_KEY = "take_key"
     RING_BELL = "ring_bell"
     UNCLEAR = "unclear"

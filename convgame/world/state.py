@@ -3,6 +3,9 @@
 from dataclasses import dataclass, field
 from typing import TypedDict
 
+from .facts import FactStore
+from .scene import DEFAULT_SCENE, Scene
+
 
 class WorldSnapshot(TypedDict):
     turn: int
@@ -17,6 +20,10 @@ class WorldSnapshot(TypedDict):
     ending: str
     history: list[dict[str, str]]
     ready_to_lend_key: bool
+    revision: int
+    scene_revision: int
+    weather_revision: int
+    observations: dict
 
 
 @dataclass
@@ -32,6 +39,11 @@ class World:
     bell_rung: bool = False
     ending: str = "playing"
     history: list[dict[str, str]] = field(default_factory=list)
+    scene: Scene = DEFAULT_SCENE
+    revision: int = 0
+    scene_revision: int = 0
+    weather_revision: int = 0
+    facts: FactStore = field(default_factory=FactStore)
 
     @property
     def ready(self) -> bool:
@@ -56,4 +68,8 @@ class World:
             "ending": self.ending,
             "history": [entry.copy() for entry in self.history[-6:]],
             "ready_to_lend_key": self.ready,
+            "revision": self.revision,
+            "scene_revision": self.scene_revision,
+            "weather_revision": self.weather_revision,
+            "observations": self.facts.snapshot(),
         }

@@ -44,11 +44,26 @@ The **Narrator** describes actions and observable outcomes. **Maren** speaks whe
 addressed or when a significant action provokes a response. Reading an object
 does not require him to comment, and asking about the ledger does not count as reading it.
 
+Ask sensory questions directly, such as `Are there clouds in the sky?`, `How cold
+is the water?`, or `What color is the ledger?`. The Narrator can establish small
+descriptive details about scenery that was not listed in advance, and remembers
+those details throughout the encounter. The office window provides a partial
+view of the harbor and sky. A distant view does not establish water temperature,
+and a question never invents contact, measuring tools, extra boats, or new rescue
+options. Estimates remain explicitly qualified.
+
+`Maren, are there clouds?` is character speech and uses Maren's knowledge;
+imagined or private questions remain private. Use separate lines for an observation
+and explicit speech. A combined observation and speech line receives a clarification
+and uses one turn without applying either channel.
+
 An action and speech can share a line, for example `I read the ledger and tell Maren
 I'll take a rope, use the east steps, and return the key.` Physical actions resolve
 before accompanying speech; preparing the plan and asking for the key in the same
 turn still cannot win. Supported physical actions are inspecting the three scene
 objects, ringing the bell, and attempting to take the guarded key.
+Scenery inspections and descriptive attribute questions use the separate
+observation path and do not require a registered object.
 
 Commands `/look`,
 `/status`, `/help`, and `/quit` are free; each evaluated line uses one of twelve
@@ -69,7 +84,7 @@ Threatening Maren repeatedly can end the encounter early.
 
 1. [Jev's Python SDK](https://docs.typesafe.ai/sdk/python) receives the scene,
    current world, six recent messages with labeled narration and speech, and the player's line in **one
-   `system_one` call**. Eleven independent questions cover physical action and its
+   `system_one` call**. Eleven independent questions cover physical action or observation and its
    object, explicit speech recipient, spoken intent and its object,
    off-world dialogue, safe-plan commitment, key handover, tension,
    hostility, and reassurance. SDK retries are disabled to keep one attempt per turn.
@@ -77,7 +92,7 @@ Threatening Maren repeatedly can end the encounter early.
    Noul probabilities to adjust trust/suspicion and a normalized, confidence-gated
    tension Score for composure. Noul has no confidence field. Ambiguity produces
    a Narrator clarification; off-world remarks and private intentions do not change
-   emotional dials; quiet inspections also leave Maren's mood unchanged.
+   emotional dials; quiet inspections and observations also leave Maren's mood unchanged.
    Reassurance and promises require explicit speech to Maren;
    observable hostile actions can affect him without spoken words.
 3. Python selects ordered response beats with explicit speakers, then sends the
@@ -92,28 +107,43 @@ Threatening Maren repeatedly can end the encounter early.
    100 words allowed across the whole response. Missing, extra, reordered, or
    unauthorized speakers, malformed JSON, and incomplete or oversized text fall
    back to a scripted response with the same narration and speech structure.
+4. Direct observations first use a separate structured Bonsai resolution request.
+   Python checks a bounded patch of at most one scenery referent and two facts,
+   canonical identifiers, access evidence, scopes, lifetimes, protected mechanics,
+   conflicts, and state revision. New facts and estimates require a separate semantic
+   review with the complete scene and existing fact store. One rejected proposal may
+   be revised once; another rejection returns a fixed limitation with an empty patch.
+   Accepted facts, evidence and the turn commit together. Observation answers render
+   their approved statements directly, with no final prose-generation request.
+   Reusing existing facts normally needs only the resolution request.
 
 To win, the ledger must have been read, the safety plan agreed, trust must be at
 least 55%, and suspicion below 65% **before** the request for the key. Jev must
 also confidently identify a peaceful handover request. Python checks these rules
 again before awarding the key. Physical grabs are blocked even when you are ready.
 Generated prose cannot mutate state; `/status`
-and the terminal ending are authoritative. As with any prompted narrator, prose
-may occasionally contradict the directive; it is not semantically re-evaluated.
+and the terminal ending are authoritative. New observation statements receive semantic
+review; that review remains a fallible model judgment. Existing action and character
+narration is not semantically re-evaluated and may occasionally contradict its directive.
 
-Jev failures leave the turn and world unchanged. Bonsai failures use a clearly
+Jev and pre-commit observation-service failures leave the turn and world unchanged.
+Rejected proposals add no facts; their evaluated fallback consumes one turn.
+Bonsai narration failures use a clearly
 announced scripted response after the resolved action, so retrying does not apply
-an action twice.
-Game state is in memory; quitting starts a new encounter next time.
+an action twice. Final-turn observations appear before the timeout. Facts persist
+independently of the six-message history; descriptive repetition does not change the
+weather. Only an authored scene event can supersede weather or view facts, with a
+recorded reason. Game state is in memory; quitting starts a fresh encounter next time.
 
 ## Configuration and development
 
 ```bash
 uv run convgame --debug                        # decisions, state, per-service timings
-uv run convgame --log-file logs/my-game.jsonl   # choose the execution log path
+uv run convgame --log-file logs/my-game.log     # choose the execution log path
 uv run convgame --bonsai-url http://127.0.0.1:8081
 uv run convgame --jev-model jev-latest --confidence 0.6
 uv run pytest
+uv run python -m convgame.evaluate_observations # opt-in live model evaluation
 ```
 
 `BONSAI_URL` defaults to `http://127.0.0.1:8080` (a trailing `/v1` is also accepted).
@@ -124,21 +154,40 @@ Use the Bonsai repository's runtime for its weights, not stock llama.cpp.
 The `world/` package separates state and decision types, directive constants,
 confidence checks, emotion changes, actions, and outcomes. The `jev/` package separates the client,
 question builder, response validation, and scene and question constants.
-`bonsai.py` owns local narration and dialogue generation, and `cli.py` connects them.
+`world/scene.py` owns shared canon, access anchors and policy; `world/facts.py` owns
+typed facts, evidence, estimates, patch validation and commit. `observations.py`
+prepares model resolutions and semantic reviews outside the network-free world layer.
+`bonsai.py` owns the local model transport and narration, and `cli.py` connects them.
 Tests cover mechanics, confidence gates, the actual SDK response shapes using a
-mock HTTP transport, Bonsai's HTTP contract, and a complete game with test doubles.
+mock HTTP transport, Bonsai's HTTP contract, a complete game with test doubles,
+observation continuity, perception, protected state, atomic failure, stale revisions,
+commit replay, and fact lifecycles.
+
+The opt-in evaluator uses unseen questions and a sequence that pushes the first
+cloud answer out of history, plus addressed and private questions. It requires
+the same live services as play and sends paid Jev requests only after checking
+Bonsai connectivity. It writes `reports/observations-live.json` and
+`logs/observations-live.log`; use `--output` and `--log-file` to choose paths.
+The report includes classifications, responses, fact IDs, fallbacks, timings and
+mechanical checks. Human-review fields for sensible answers, contradictions,
+unsupported knowledge and unintended story opportunities start as `null`:
+assess the transcript rather than treating a model's review pass as proof.
 
 Every invocation, including `--check`, appends an execution log to
-`logs/convgame.jsonl` and prints its location. Use `--log-file PATH` to choose another
-file. Each line is a JSON object with a UTC timestamp, session identifier, event,
-and plain-language `reason`. Evaluated input also has an `attempt` and intended
-`turn`, so a failed Jev call and its retry are distinguishable.
+`logs/convgame.log` and prints its location. Use `--log-file PATH` to choose another
+file. Each event starts with a UTC timestamp, session identifier, event name,
+and plain-language reason, followed by indented details. Nested fields and
+multiline text are expanded for reading directly in a terminal. Evaluated input
+also has an `attempt` and intended `turn`, so a failed Jev call and its retry are
+distinguishable. Events are flushed immediately so `tail -f` shows them as they happen.
 
 The log includes Jev's scene, state, player line, questions, returned answers and
 confidence/probabilities; Bonsai's prompts, generation settings, response schema,
 returned response and call timings; and Python's confidence checks, emotion
 changes, action/speech decisions, safety-plan and key-handover requirements,
-endings, selected response beats, fallbacks, and final state. Reasons describe
+endings, selected response beats, fallbacks, and final state. Observation events also
+record the canonical query, access evidence, reused facts, candidate patch, semantic
+verdict, rejection reasons and committed revision. Reasons describe
 the program's actual rule branches. API keys, authorization headers, and provider
 exception bodies are not recorded. Player text and model responses are recorded;
 the default `logs/` directory is excluded from Git.
@@ -146,7 +195,7 @@ the default `logs/` directory is excluded from Git.
 To watch the log while playing:
 
 ```bash
-tail -f logs/convgame.jsonl
+tail -f logs/convgame.log
 ```
 
 ### Debug in Visual Studio Code

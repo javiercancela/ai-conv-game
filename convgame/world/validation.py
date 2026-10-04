@@ -24,6 +24,9 @@ def blocked_event(answers: Decisions, floor: float) -> str | None:
         return block(constants.CLARIFY_EVENT, "The inspection target is missing, unknown, or below the confidence floor.")
     if answers.recipient.confidence < floor or answers.recipient.value == Recipient.UNKNOWN:
         return block(constants.CLARIFY_EVENT, "The speech recipient is unknown or below the confidence floor.")
+    if answers.action.value == Action.OBSERVE and answers.recipient.value != Recipient.NONE:
+        return block(constants.MIXED_OBSERVATION_EVENT,
+                     "Observation and explicit speech need separate lines in this version; resolve neither channel.")
     if answers.recipient.value == Recipient.NONE:
         record("world.validation", "The physical interpretation passed; without explicit speech, spoken-intent checks are unnecessary.",
                accepted=True, confidence_floor=floor)

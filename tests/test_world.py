@@ -139,7 +139,7 @@ def test_private_intentions_cannot_reassure_threaten_or_win() -> None:
 
     state, directive = advance(world, answers)
 
-    assert state == replace(world, turn=1)
+    assert state == replace(world, turn=1, revision=1)
     assert directive.event == "unspoken"
     assert [beat.speaker for beat in directive.beats] == [Speaker.NARRATOR]
 

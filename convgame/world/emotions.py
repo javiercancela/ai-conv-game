@@ -12,7 +12,7 @@ def clamp(value: float) -> float:
 def update_emotions(state: World, answers: Decisions, floor: float) -> None:
     """Mutate the new turn's state after its action passes confidence checks."""
     speaking = answers.recipient.value == Recipient.MAREN
-    if not speaking and answers.action.value in (Action.NONE, Action.INSPECT):
+    if not speaking and answers.action.value in (Action.NONE, Action.INSPECT, Action.OBSERVE):
         record("world.emotions", "Quiet inspection and private intentions cannot change Maren's emotions.",
                changed=False)
         return

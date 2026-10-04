@@ -3,6 +3,8 @@
 from dataclasses import replace
 import io
 import json
+import logging
+import re
 
 import httpx2
 import pytest
@@ -11,7 +13,7 @@ from typesafe_sdk import ChoiceAnswer, NoulAnswer, RetryPolicy, ScoreAnswer, Typ
 from convgame.bonsai import BonsaiNarrator
 from convgame.cli import main, play
 from convgame.jev import JevDecider, questions
-from convgame.trace import file_log, record
+from convgame.trace import file_log, log_context, record
 from convgame.world import DIRECTIVES, Decisions, Pick, World, advance
 
 
@@ -23,8 +25,18 @@ NEUTRAL = Decisions(
 )
 
 
-def entries(path):
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+@pytest.fixture
+def captured_logs(caplog):
+    logger = logging.getLogger("convgame.trace")
+    logger.addHandler(caplog.handler)
+    try:
+        yield caplog
+    finally:
+        logger.removeHandler(caplog.handler)
+
+
+def entries(captured_logs):
+    return [entry.trace for entry in captured_logs.records if entry.name == "convgame.trace"]
 
 
 def jev_response(**overrides):
@@ -43,8 +55,8 @@ def jev_response(**overrides):
             "usage": {"input_tokens": 20, "output_tokens": 10}}
 
 
-def test_cli_log_captures_real_service_contracts_and_a_complete_win(tmp_path, monkeypatch, capsys):
-    path = tmp_path / "nested" / "game.jsonl"
+def test_cli_log_captures_real_service_contracts_and_a_complete_win(tmp_path, monkeypatch, capsys, captured_logs):
+    path = tmp_path / "nested" / "game.log"
     responses = iter([
         jev_response(action="inspect", action_object="ledger", recipient="none", intent="none"),
         jev_response(intent="persuade", rescue_plan="yes", reassurance=1),
@@ -85,7 +97,7 @@ def test_cli_log_captures_real_service_contracts_and_a_complete_win(tmp_path, mo
     output = capsys.readouterr()
     assert str(path) in output.err
     assert "you win" in output.out
-    trace = entries(path)
+    trace = entries(captured_logs)
     jev_calls = [entry for entry in trace if entry["event"] == "jev.request"]
     assert len(jev_calls) == len(sent_jev) == 3
     for entry, body in zip(jev_calls, sent_jev):
@@ -102,13 +114,17 @@ def test_cli_log_captures_real_service_contracts_and_a_complete_win(tmp_path, mo
     assert "readiness" in handover["reason"]
     assert [entry["attempt"] for entry in trace if entry["event"] == "turn.finished"] == [1, 2, 3]
     assert next(entry for entry in trace if entry["event"] == "game.finished")["world"]["key_given"]
-    assert all(entry["reason"] and entry["timestamp"] for entry in trace)
+    assert all(entry["reason"] for entry in trace)
     assert len({entry["session"] for entry in trace}) == 1
-    assert "test-secret" not in path.read_text()
+    log = path.read_text(encoding="utf-8")
+    assert "test-secret" not in log
+    assert "jev.request: Interpret this player line" in log
+    assert "  event_selected: won\n" in log
+    assert "  response:\n    Narrator:" in log
 
 
-def test_failed_jev_attempt_and_invalid_bonsai_have_distinct_logged_outcomes(tmp_path, monkeypatch):
-    path = tmp_path / "failures.jsonl"
+def test_failed_jev_attempt_and_invalid_bonsai_have_distinct_logged_outcomes(tmp_path, monkeypatch, captured_logs):
+    path = tmp_path / "failures.log"
 
     class Decider:
         failed = False
@@ -130,7 +146,7 @@ def test_failed_jev_attempt_and_invalid_bonsai_have_distinct_logged_outcomes(tmp
     with file_log(path):
         play(Decider(), BonsaiNarrator("http://localhost:8080"))
 
-    trace = entries(path)
+    trace = entries(captured_logs)
     cancelled = next(entry for entry in trace if entry["event"] == "turn.cancelled")
     finished = next(entry for entry in trace if entry["event"] == "turn.finished")
     assert cancelled["attempt"] == 1 and cancelled["turn"] == 1
@@ -148,8 +164,8 @@ def test_failed_jev_attempt_and_invalid_bonsai_have_distinct_logged_outcomes(tmp
     (replace(NEUTRAL, off_world=Pick("yes", 1)), "off-world"),
     (replace(NEUTRAL, recipient=Pick("unknown", 1)), "speech recipient"),
 ])
-def test_blocked_turn_logs_its_specific_cause_and_skips_bonsai(tmp_path, monkeypatch, answers, expected_reason):
-    path = tmp_path / "blocked.jsonl"
+def test_blocked_turn_logs_its_specific_cause_and_skips_bonsai(tmp_path, monkeypatch, answers, expected_reason, captured_logs):
+    path = tmp_path / "blocked.log"
 
     def unexpected_request(*args, **kwargs):
         pytest.fail("Scripted guidance must not call Bonsai")
@@ -158,7 +174,7 @@ def test_blocked_turn_logs_its_specific_cause_and_skips_bonsai(tmp_path, monkeyp
     with file_log(path):
         world, directive = advance(World(), answers)
         assert BonsaiNarrator("http://localhost:8080").narrate(world, "Unclear input", directive) == directive.fallback
-    trace = entries(path)
+    trace = entries(captured_logs)
     validation = next(entry for entry in trace if entry["event"] == "world.validation")
     assert not validation["accepted"]
     assert expected_reason in validation["reason"].lower()
@@ -166,48 +182,63 @@ def test_blocked_turn_logs_its_specific_cause_and_skips_bonsai(tmp_path, monkeyp
     assert not any(entry["event"] == "world.emotions" for entry in trace)
 
 
-def test_refusal_log_exposes_readiness_reached_too_late(tmp_path):
-    path = tmp_path / "refusal.jsonl"
+def test_refusal_log_exposes_readiness_reached_too_late(tmp_path, captured_logs):
+    path = tmp_path / "refusal.log"
     with file_log(path):
         world, directive = advance(World(ledger_read=True, trust=1),
             replace(NEUTRAL, intent=Pick("request", 1), object=Pick("key", 1),
                     rescue_plan=Pick("yes", 1), handover=Pick("yes", 1)))
     assert world.ready and directive.event == "refuse"
-    refusal = next(entry for entry in entries(path) if entry["event"] == "world.key_request")
+    refusal = next(entry for entry in entries(captured_logs) if entry["event"] == "world.key_request")
     assert refusal["failed_checks"] == ["ready_before_turn"]
     assert not refusal["requirements"]["before"]["plan_agreed"]
     assert refusal["requirements"]["after"]["plan_agreed"]
 
 
-def test_logs_append_sessions_flush_escape_input_and_release_handlers(tmp_path, monkeypatch):
+def test_logs_append_sessions_flush_and_release_handlers(tmp_path, monkeypatch, captured_logs):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     monkeypatch.setattr("sys.argv", ["convgame"])
-    path = tmp_path / "logs" / "convgame.jsonl"
+    path = tmp_path / "logs" / "convgame.log"
     assert main() == 1
-    first_session = entries(path)[0]["session"]
+    first_session = entries(captured_logs)[0]["session"]
+    first_log = path.read_text(encoding="utf-8")
     assert main() == 1
-    starts = [entry for entry in entries(path) if entry["event"] == "session.started"]
+    starts = [entry for entry in entries(captured_logs) if entry["event"] == "session.started"]
     assert len(starts) == 2
     assert starts[-1]["session"] != first_session
+    log = path.read_text(encoding="utf-8")
+    assert log.startswith(first_log)
+    assert log.count("session.started:") == 2
     size = path.stat().st_size
     record("outside.session", "Closed file handlers must not receive later records.")
     assert path.stat().st_size == size
 
-    escaped = tmp_path / "unicode.jsonl"
-    with file_log(escaped):
-        record("input", "Unicode and line breaks remain valid JSON Lines.", player_line="Maren, sí.\nAnother line.")
-        assert len(entries(escaped)) == 1  # Each record is flushed immediately.
-    assert entries(escaped)[0]["player_line"] == "Maren, sí.\nAnother line."
+
+def test_plain_text_log_is_readable_and_flushes_nested_multiline_details(tmp_path):
+    path = tmp_path / "unicode.log"
+    with file_log(path), log_context(turn=2, attempt=3):
+        record("turn.started", "Evaluate the player line.", player_line="Maren, sí.\nAnother line.\x1b[31m",
+               before={"ledger_read": True, "key_given": False}, speakers=["Narrator", "Maren"],
+               model=None)
+        log = path.read_text(encoding="utf-8")  # The record is flushed before the context exits.
+    header, details = log.split("\n", 1)
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} UTC "
+                        r"\[session=[0-9a-f]{32} turn=2 attempt=3\] turn.started: Evaluate the player line\.", header)
+    assert "  player_line:\n    Maren, sí.\n    Another line.\\x1b[31m\n" in details
+    assert "  before:\n    ledger_read: yes\n    key_given: no\n" in details
+    assert "  speakers:\n    1: Narrator\n    2: Maren\n" in details
+    assert "  model: none\n" in details
+    assert "\x1b" not in log
 
 
-def test_check_logs_connectivity_without_a_jev_request(tmp_path, monkeypatch):
-    path = tmp_path / "check.jsonl"
+def test_check_logs_connectivity_without_a_jev_request(tmp_path, monkeypatch, captured_logs):
+    path = tmp_path / "check.log"
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-secret")
     monkeypatch.setattr("sys.argv", ["convgame", "--check", "--log-file", str(path)])
     monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b'{"data": []}'))
     assert main() == 0
-    trace = entries(path)
+    trace = entries(captured_logs)
     assert any(entry["event"] == "configuration.checked" for entry in trace)
     assert not any(entry["event"] == "jev.request" for entry in trace)
     assert "test-secret" not in path.read_text()
@@ -216,7 +247,7 @@ def test_check_logs_connectivity_without_a_jev_request(tmp_path, monkeypatch):
 def test_log_open_failure_stops_before_services(tmp_path, monkeypatch, capsys):
     parent_file = tmp_path / "not-a-directory"
     parent_file.write_text("occupied")
-    monkeypatch.setattr("sys.argv", ["convgame", "--log-file", str(parent_file / "log.jsonl")])
+    monkeypatch.setattr("sys.argv", ["convgame", "--log-file", str(parent_file / "game.log")])
     monkeypatch.setattr("convgame.cli.run", lambda args: pytest.fail("Do not run without the requested log"))
     assert main() == 1
     assert "Cannot write execution log" in capsys.readouterr().err

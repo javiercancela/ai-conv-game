@@ -37,7 +37,7 @@ def test_ambiguous_action_only_consumes_time(change):
     original = World()
     updated, directive = advance(original, answers(hostility=1, reassurance=1, **change))
     assert directive.event == "clarify"
-    assert updated == replace(original, turn=1)
+    assert updated == replace(original, turn=1, revision=1)
     assert original.turn == 0
 
 
@@ -45,7 +45,7 @@ def test_off_world_does_not_mutate_emotions_or_award_key():
     updated, directive = advance(World(), answers(off_world=Pick("yes", 1), hostility=1,
                                                 handover=Pick("yes", 1)))
     assert directive.event == "off_world"
-    assert updated == replace(World(), turn=1)
+    assert updated == replace(World(), turn=1, revision=1)
 
 
 @pytest.mark.parametrize("world", [World(), World(ledger_read=True, trust=1),

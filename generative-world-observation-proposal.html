@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="A proposal for consistent, on-demand world detail in ConvGame: infer perception, establish incidental facts, remember them, and preserve story rules.">
+  <title>ConvGame — A world that becomes more detailed</title>
+  <style>
+    :root { --ink:#18343d; --muted:#52666e; --sea:#126d75; --line:#d3dedb; --paper:#f6f4ee; --card:#fffefa; --foam:#e9f3ef; --sand:#f6e9cd; --gold:#9c6b24; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:var(--sea); text-underline-offset:3px; }
+    a:focus-visible,summary:focus-visible { outline:3px solid var(--gold); outline-offset:4px; }
+    .wrap { max-width:1160px; margin:auto; padding:0 32px; }
+    header { background:var(--ink); color:white; padding:27px 0 49px; }
+    .masthead { display:flex; justify-content:space-between; gap:20px; border-bottom:1px solid #52676c; padding-bottom:22px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+    .masthead span:last-child { color:#bfd4d2; }
+    .hero { display:grid; grid-template-columns:1.35fr 1fr; gap:48px; align-items:center; margin-top:35px; }
+    .eyebrow { color:var(--sea); font-size:12px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
+    header .eyebrow { color:#b7d9d2; }
+    h1,h2 { font-family:Georgia,"Times New Roman",serif; line-height:1.14; letter-spacing:-.025em; }
+    h1 { font-size:clamp(36px,5vw,57px); margin:12px 0 21px; max-width:16ch; }
+    h2 { font-size:32px; margin:8px 0 18px; }
+    h3 { font-size:19px; line-height:1.4; margin:0 0 10px; }
+    p { margin:0 0 15px; }
+    .lead { font-size:18px; max-width:65ch; }
+    header .lead { color:#dae6e3; }
+    .hero-card { background:#21444d; border:1px solid #67878a; border-radius:12px; padding:25px; }
+    .hero-card .label { color:#b7d9d2; }
+    .hero-card .question { font-size:21px; line-height:1.4; margin:9px 0 18px; }
+    .hero-card .reply { border-top:1px solid #67878a; padding-top:17px; color:#e0ebe6; }
+    .hero-card .memory { font-size:13px; color:#b7d9d2; margin:17px 0 0; }
+    nav { display:flex; flex-wrap:wrap; gap:10px 24px; padding:18px 0; border-bottom:1px solid var(--line); font-size:14px; font-weight:650; }
+    nav a { text-decoration:none; }
+    main { padding-bottom:35px; }
+    section { padding:38px 0; border-bottom:1px solid var(--line); scroll-margin-top:20px; }
+    .intro { font-size:18px; max-width:88ch; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:22px 0; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:23px; }
+    .label { display:block; font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:10px; }
+    .card p:last-child,.note p:last-child { margin-bottom:0; }
+    .note { background:var(--foam); border-left:4px solid var(--sea); border-radius:0 8px 8px 0; padding:18px 22px; margin:20px 0; }
+    .note.caution { background:var(--sand); border-color:var(--gold); }
+    .evidence { color:var(--muted); font-size:13px; }
+    .table-wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; margin:20px 0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    caption { text-align:left; padding:14px 16px; font-weight:700; }
+    th { text-align:left; background:#edf2ee; font-weight:700; }
+    th,td { padding:13px 16px; vertical-align:top; border-bottom:1px solid var(--line); }
+    tr:last-child td { border-bottom:0; }
+    td:first-child { min-width:155px; }
+    code { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.88em; overflow-wrap:anywhere; }
+    pre { background:var(--ink); color:#e3eee9; border-radius:9px; padding:21px; overflow:auto; font-size:13px; line-height:1.6; }
+    pre code { font-size:inherit; overflow-wrap:normal; }
+    ul,ol { padding-left:24px; }
+    li { margin:7px 0; padding-left:2px; }
+    .pipeline { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; list-style:none; padding:0; margin:24px 0; counter-reset:stage; }
+    .pipeline li { margin:0; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:17px; counter-increment:stage; }
+    .pipeline li::before { content:counter(stage); display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:var(--sea); color:white; font-size:12px; font-weight:750; margin-bottom:13px; }
+    .pipeline strong { display:block; font-size:15px; line-height:1.4; margin-bottom:7px; }
+    .pipeline p { color:var(--muted); font-size:13px; margin:0; }
+    .pipeline .commit { border-top:4px solid var(--sea); padding-top:14px; }
+    .example { border-left:3px solid var(--sea); padding:0 0 0 18px; margin:20px 0; }
+    .example p { margin-bottom:9px; }
+    .example .stored { font-size:13px; color:var(--muted); }
+    .step { display:grid; grid-template-columns:38px 1fr; gap:16px; border-top:1px solid var(--line); padding:23px 0; }
+    .step:first-of-type { border-top:0; }
+    .number { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--sea); color:white; font-size:14px; font-weight:750; }
+    details { background:var(--card); border:1px solid var(--line); border-radius:9px; padding:17px 21px; margin:19px 0; }
+    summary { cursor:pointer; font-weight:650; }
+    details[open] summary { margin-bottom:17px; }
+    footer { color:var(--muted); font-size:13px; padding:24px 0 36px; }
+    @media(max-width:900px) { .pipeline { grid-template-columns:repeat(3,1fr); } }
+    @media(max-width:760px) { .wrap { padding:0 20px; } .hero,.grid { grid-template-columns:1fr; gap:23px; } .masthead { flex-direction:column; gap:6px; } h1 { max-width:20ch; } header { padding-bottom:32px; } .pipeline { grid-template-columns:1fr 1fr; } th,td { padding:11px 12px; } }
+    @media(max-width:430px) { .pipeline { grid-template-columns:1fr; } .step { grid-template-columns:29px 1fr; gap:12px; } .number { width:28px; height:28px; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media print { body { background:white; font-size:10.5pt; } header { background:white; color:var(--ink); padding:0 0 20px; } header .lead,header .eyebrow,.masthead span:last-child { color:var(--muted); } .hero-card { background:white; color:var(--ink); border-color:var(--line); } .hero-card .label,.hero-card .reply,.hero-card .memory { color:var(--muted); } nav { display:none; } .wrap { max-width:none; padding:0; } section { padding:24px 0; } .card,.pipeline li,.example,.step,tr { break-inside:avoid; } h2,h3 { break-after:avoid; } pre { background:#f0f2ef; color:var(--ink); white-space:pre-wrap; } a { color:inherit; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="masthead"><span>ConvGame / The Last Crossing</span><span>Design proposal · 4 October 2026</span></div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">On-demand world detail</div>
+          <h1>A world that becomes more detailed.</h1>
+          <p class="lead">Let the LLM resolve questions about unlisted scenery, choose small details consistent with the scene, and remember what it establishes. Author the story’s boundaries; generate the detail within them.</p>
+        </div>
+        <aside class="hero-card" aria-label="Proposed observation example">
+          <span class="label">Player, looking through a usable harbor window</span>
+          <p class="question">“Are there clouds in the sky?”</p>
+          <div class="reply"><strong>Narrator:</strong> Low, dark clouds cover the harbor sky.</div>
+          <p class="memory">New world fact → harbor sky / cloud cover / low and dark<br>Later questions reuse it until the weather changes.</p>
+        </aside>
+      </div>
+    </div>
+  </header>
+  <div class="wrap">
+    <nav aria-label="Proposal sections">
+      <a href="#recommendation">Recommendation</a><a href="#experience">Player experience</a><a href="#model">World model</a><a href="#pipeline">Resolution</a><a href="#contract">Data contract</a><a href="#integration">Code changes</a><a href="#validation">Acceptance</a>
+    </nav>
+    <main>
+      <section id="recommendation">
+        <div class="eyebrow">01 / Decision</div>
+        <h2>Make missing detail available for creation.</h2>
+        <p class="intro">Use <strong>lazy world enrichment</strong>: when a player asks about an unspecified detail, resolve what they mean and what they can perceive, consult existing facts, then propose the smallest compatible addition. Validate and commit that addition before presenting it as true. A missing object entry means <em>not yet specified</em>, rather than <em>does not exist</em>.</p>
+        <p>This supersedes the finite scenery catalog and authored atmospheric alternatives in <a href="water-observation-proposal.html">the water-observation proposal</a>. Its useful principles still apply: resolve an observation throughout the pipeline, preserve authored actions, and provide a concrete response when perception is limited.</p>
+        <div class="grid">
+          <article class="card">
+            <span class="label">Author the consequential structure</span>
+            <h3>Keep the encounter’s promises.</h3>
+            <p>The storm, stranded traveler, guarded key, ledger advice, safety commitment, and win conditions remain authoritative. Authors define broad constraints and access conditions, rather than every describable object or attribute.</p>
+          </article>
+          <article class="card">
+            <span class="label">Generate incidental detail</span>
+            <h3>Allow new subjects and properties.</h3>
+            <p>Sky, clouds, water, window condensation, the grain of the desk, or the sound of rain can become referents on demand. No new enum member, directive, or hand-written answer is needed for each one.</p>
+          </article>
+        </div>
+        <div class="note"><p><strong>Recommended boundary:</strong> the LLM may establish descriptive world facts. Python retains control of actions, possessions, access, character commitments, time, and endings. A generated fact becomes part of the fiction once accepted; it does not grant new capabilities merely by appearing in prose.</p></div>
+        <div class="table-wrap">
+          <table>
+            <caption>Why this design</caption>
+            <thead><tr><th scope="col">Approach</th><th scope="col">Consequence</th><th scope="col">Decision</th></tr></thead>
+            <tbody>
+              <tr><td>Enumerate scenery and all attributes</td><td>Consistent, but every new question requires more authoring.</td><td>Use for important content only.</td></tr>
+              <tr><td>Let the Narrator improvise freely</td><td>Flexible, but facts can change between answers or create accidental solutions.</td><td>Avoid using prose as the world database.</td></tr>
+              <tr><td>Generate and commit constrained facts</td><td>Flexible questions, persistent answers, explicit story boundaries.</td><td><strong>Recommended.</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="experience">
+        <div class="eyebrow">02 / What the player experiences</div>
+        <h2>Answer the question, then keep the answer true.</h2>
+        <p>These are proposed responses, not new facts already present in the implementation. The current encounter is stormbound and described as happening “tonight.” The window exists in <code>/look</code>, but its view of the harbor and sky still needs to be established.</p>
+        <div class="example">
+          <p><strong>Player:</strong> Are there clouds in the sky?</p>
+          <p><strong>Narrator:</strong> Through the window, you can see low, dark clouds over the harbor.</p>
+          <p class="stored"><strong>Resolution:</strong> If the window offers that view, create an implicit harbor-sky referent and establish its cloud cover. Use the ongoing storm as a constraint. The absence of a registered <code>sky</code> object does not block the question.</p>
+        </div>
+        <div class="example">
+          <p><strong>Player, several turns later:</strong> Has the sky cleared?</p>
+          <p><strong>Narrator:</strong> The same low clouds still cover the harbor.</p>
+          <p class="stored"><strong>Resolution:</strong> Reuse the committed fact. Do not sample new weather because the wording changed or the earlier answer left dialogue history.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Question / context</th><th scope="col">Suitable answer</th><th scope="col">What becomes state</th></tr></thead>
+            <tbody>
+              <tr><td>“How cold is the water?”<br>Viewing the harbor from the office</td><td>“You cannot tell its temperature from the window.” If established environmental cues support an estimate, label it as an estimate.</td><td>No invented measurement. Store a temperature fact only when an accepted source can establish it; an estimate remains distinct from confirmed temperature.</td></tr>
+              <tr><td>Same question, with an already accepted touch or measurement</td><td>“The water feels cold against your hand.” Choose a qualitative detail if unspecified.</td><td>A generated qualitative temperature and the player’s evidence for it. Do not invent the touch, a thermometer, or an exact number.</td></tr>
+              <tr><td>“Are there more boats on the water?”</td><td>“You see no other boats in the stretch of harbor visible from here.”</td><td>A scoped absence in the current view, if consistent with existing boats. It does not assert that the whole harbor contains no boats.</td></tr>
+              <tr><td>“Are there clouds?”<br>Another scene: bright sunshine outdoors</td><td>“A few thin clouds sit near the horizon,” or “The sky is clear.” Choose either if compatible.</td><td>One cloud-cover fact. Bright sunshine favors light cloud, but does not logically require a cloudless sky.</td></tr>
+              <tr><td>“Are there clouds?”<br>A windowless cellar</td><td>“You cannot see the sky from here.”</td><td>No cloud-cover fact. A blocked view says nothing about the actual weather.</td></tr>
+              <tr><td>“Do those clouds mean a storm is coming?”</td><td>In this encounter: “The storm is already here.” Elsewhere, describe warning signs as an inference.</td><td>Reuse known weather. A prediction is not a scheduled storm event.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Choose the least consequential sufficient answer.</strong> A color, texture, or cloud pattern is usually safe to establish. A working spare boat, hidden rope, helpful stranger, secret exit, or magically calming water can change the player’s options. Such additions need authored permission or an existing action rule. This principle still allows substantial descriptive variety.</p>
+        <div class="note"><p><strong>Direct questions are a new information channel.</strong> Bare sensory questions such as “Are there clouds?” go to the Narrator. “Maren, are there clouds?” remains character speech; it is answered according to what Maren knows. Private thoughts and imagined questions remain private. Bare requests for the key still require explicit speech under the current rules.</p></div>
+      </section>
+
+      <section id="model">
+        <div class="eyebrow">03 / Domain model</div>
+        <h2>Separate the world, its facts, and the player’s evidence.</h2>
+        <p>The following terms are proposed for this design. <strong>Authored canon</strong> is the scene’s declared content and constraints. An <strong>established fact</strong> is an accepted detail with a subject, property, scope, and lifetime. An <strong>observation</strong> is information available to the player through a particular sense or source. An <strong>estimate</strong> is an interpretation of evidence, not an established physical measurement.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Layer</th><th scope="col">Example</th><th scope="col">Authority</th></tr></thead>
+            <tbody>
+              <tr><td>Authored canon and mechanical state</td><td>Storm active; key with Maren; ledger unread.</td><td>Scene authors and Python rules. Generated detail cannot overwrite it.</td></tr>
+              <tr><td>Established generated detail</td><td>Low, dark clouds over the harbor during this storm.</td><td>Canonical within its scope after validation. Later generation must respect it.</td></tr>
+              <tr><td>Player evidence and estimates</td><td>Clouds seen through the window; an uncertain forecast; something Maren claims.</td><td>Controls what can be said and with what certainty. Testimony or guesses do not automatically establish objective truth.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Use a small fact store, not an exhaustive object model.</h3>
+        <p>Add an overlay to <code>World</code> containing implicit referents, established facts, and observations. A referent such as <code>harbor.sky</code> is a contextual handle, not a new takeable inventory object. Each fact uses a canonical subject and facet, a typed value, an atomic statement, provenance, and a validity scope. Facets are extensible strings grouped under broad policy categories; they are not a new list of every possible player question.</p>
+        <p>For this twelve-turn encounter, keep all committed descriptive facts in session state and include the small relevant scene overlay in resolution context. Do not rely on the six-message dialogue window, and do not silently drop canonical facts to fit a prompt. A later larger world can index facts by region and subject while retaining the full store.</p>
+        <ul>
+          <li><strong>Unknown is different from absent.</strong> No cloud entry means unspecified. An accepted <code>cloud_cover = clear</code> is a negative fact. “No boats visible” is narrower than “no boats exist.”</li>
+          <li><strong>Normalize related questions.</strong> “Clouds,” “cloud cover,” and “has the sky cleared?” consult the same weather facet. Compare mutually exclusive values as well as exact duplicate keys.</li>
+          <li><strong>Respect scope and time.</strong> Harbor weather belongs to a weather episode; visible boats belong to a view and observation turn. Do not extrapolate a partial view to the whole world.</li>
+          <li><strong>Repetition does not change reality.</strong> Cosmetic facts remain stable. Weather changes only through an authored event in the first version. Transient facts can be superseded after an accepted movement or world event, with a recorded reason.</li>
+          <li><strong>Keep estimates qualified.</strong> Reuse an estimate with its evidence and uncertainty; recompute it when its supporting facts change. Do not turn “probably cold” into a known numerical temperature later.</li>
+        </ul>
+        <div class="note caution"><p><strong>Generated detail can create expectations.</strong> Labeling a boat “decorative” internally does not stop a player trying to use it. Avoid inventing consequential resources in the first place, or give them authored availability rules. If a player later acts on generated scenery, resolve that attempt through the action system and preserve the scenery’s existence.</p></div>
+      </section>
+
+      <section id="pipeline">
+        <div class="eyebrow">04 / Resolution algorithm</div>
+        <h2>Propose, validate, commit, and describe.</h2>
+        <ol class="pipeline" aria-label="Proposed observation pipeline">
+          <li><strong>Classify the line</strong><p>Jev distinguishes observation, physical action, speech, thought, and off-world input.</p></li>
+          <li><strong>Assemble context</strong><p>Supply canon, relevant facts, access, senses, knowledge, and protected story constraints.</p></li>
+          <li><strong>Resolve the detail</strong><p>Bonsai resolves the subject, checks perception, reuses facts, or proposes a small patch.</p></li>
+          <li class="commit"><strong>Validate and commit</strong><p>Python checks authority and conflicts; semantic review checks the proposed meaning.</p></li>
+          <li><strong>Present the result</strong><p>Render accepted statements and limitations. Subsequent turns reuse the fact store.</p></li>
+        </ol>
+        <h3>First decide whether the information is available.</h3>
+        <p>Resolve aliases and pronouns against the current scene and recent observation focus. If genuinely ambiguous, ask a focused question. Otherwise determine an access path: open-air view, an existing window, direct contact, audible sound, a readable source, or knowledgeable testimony. Missing object registration is not ambiguity. The question supplies a topic, not proof of its premises: “What is inside the spare boat?” must not create a spare boat merely because the player named one.</p>
+        <p>The LLM can infer ordinary relationships from context: an outdoor player with sight can generally see the sky; an office window may provide a partial view. Require it to cite supplied evidence for that inference. It must not create a new window, move the player, remove an obstruction, or perform a touch merely to make the requested answer possible. If access is genuinely unspecified, use a conservative limitation or an explicitly permitted spatial detail.</p>
+        <h3>Then reuse facts or complete the unspecified part.</h3>
+        <p>Apply this order: mechanical outcomes and authored constraints → applicable authored facts → applicable established generated facts → a new compatible choice. Infer consequences of existing facts where possible. When several choices remain, prefer the one with the fewest assumptions and smallest effect on the story; establish only the detail needed for the question.</p>
+        <p>Ask the model to return a structured resolution, not free prose plus unrestricted state edits. For a clear-sky question, one weather fact is enough; there is no reason to create a meteorological simulation, an approaching fleet, or a future event. A single implied referent and up to two atomic facts is a reasonable initial patch budget.</p>
+        <h3>Validate meaning as well as structure.</h3>
+        <p>Python can reject malformed values, unknown evidence IDs, duplicate or conflicting canonical slots, invalid scopes, stale scene revisions, and any attempt to modify protected state. It cannot prove that arbitrary natural-language detail is consistent with every story implication. For newly proposed facts, use a separate semantic review request with the original constraints and existing facts; accept only a clear pass. This review can reuse the local Bonsai service with a different prompt and a small structured verdict.</p>
+        <p>The reviewer checks perceptibility, compatibility, unsupported precision, misleading resource creation, cross-facet contradictions, and whether each statement matches its structured value. It must also check that a proposed negative fact is justified within the view being described. Treat this as an additional quality check, with measured error rates; a second LLM judgment is not a proof. Allow no more than one revised proposal after a rejection, then answer with established information or a concrete limitation.</p>
+        <h3>Make the accepted statements the response.</h3>
+        <p>For the initial version, render observation answers directly from their approved atomic statements, with fixed wrappers for estimates and perceptual limitations. Do not ask a final prose pass to add fresh details. Existing action and Maren beats can continue using the current Narrator path, with committed observation context supplied when needed.</p>
+        <div class="note"><p><strong>The important transaction:</strong> no candidate fact is canon until its complete patch passes validation. Apply accepted facts, observation evidence, and the turn’s resolved state together. A failed proposal adds nothing. A later narration failure retains the accepted state and prints its approved fallback; it never reruns the action or chooses a different fact.</p></div>
+      </section>
+
+      <section id="contract">
+        <div class="eyebrow">05 / Suggested data contract</div>
+        <h2>A fact patch with explicit provenance.</h2>
+        <p>This illustrative payload assumes the author has permitted a view of the harbor sky through the existing window. The schema and identifiers below are proposed, not existing SDK fields. Python assigns fact IDs, provenance, revision, and commit time; the model supplies candidate detail and references to evidence.</p>
+        <pre aria-label="Illustrative structured observation resolution"><code>{
+  "status": "resolved",
+  "query": {
+    "subject": "harbor.sky",
+    "facet": "appearance.cloud_cover"
+  },
+  "perception": {
+    "mode": "sight",
+    "access_evidence": ["scene.window_harbor_view"],
+    "scope": "office.window_view"
+  },
+  "reuse_fact_ids": [],
+  "proposed_referents": [
+    {"id": "harbor.sky", "kind": "scenery", "parent": "harbor"}
+  ],
+  "proposed_facts": [{
+    "subject": "harbor.sky",
+    "facet": "appearance.cloud_cover",
+    "value": {"type": "descriptor", "text": "low_dark_overcast"},
+    "statement": "Low, dark clouds cover the harbor sky.",
+    "scope": "harbor",
+    "lifetime": "current_weather_episode",
+    "constraint_ids": ["scene.storm_active"]
+  }],
+  "answer_fact_refs": ["proposed_facts/0"]
+}</code></pre>
+        <p>After acceptance, the store adds an ID such as <code>fact_017</code>, <code>origin = generated</code>, <code>established_turn = 2</code>, and the scene/weather revision. A linked observation records that the player saw this fact through the office window. An answer that merely reuses it returns <code>fact_017</code> and an empty patch.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Resolution status</th><th scope="col">Contract</th></tr></thead>
+            <tbody>
+              <tr><td><code>resolved</code></td><td>Answer references existing or accepted new facts, available through the stated source.</td></tr>
+              <tr><td><code>estimated</code></td><td>Return a separately stored estimate with evidence IDs and explicit uncertainty. It cannot replace a physical fact.</td></tr>
+              <tr><td><code>unobservable</code></td><td>Return a limitation grounded in access or sensory requirements. Do not add a fact about the unseen attribute.</td></tr>
+              <tr><td><code>ambiguous</code></td><td>Return the competing referents and a short clarification. Do not guess a target.</td></tr>
+              <tr><td><code>protected</code></td><td>Use authored content or an existing action rule for story-critical information. Do not fill the gap with a substitute solution.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Keep estimates and limitations in dedicated response structures; they must not be smuggled into a confirmed fact’s statement. Answer references are also checked against the player’s accessible evidence, not just whether the fact exists in the world. Character replies use a separate knowledge projection; they cannot reveal a Narrator-only or undiscovered fact automatically.</p>
+        <details>
+          <summary>Validation rules and policy boundaries</summary>
+          <ul>
+            <li>Restrict operations to adding descriptive referents/facts and recording evidence. Reject arbitrary JSON paths and fields such as <code>key_given</code>, <code>ledger_read</code>, <code>trust</code>, or <code>ending</code>.</li>
+            <li>Use a schema with required fields, no extra properties, bounded strings and collections, and a few primitive value types. Enforce the patch budget in code.</li>
+            <li>Allow broad descriptive categories such as appearance, texture, ambient sound, and scoped presence. Reserve inventory, permissions, route safety, objectives, new actors, and causal world events for authored systems.</li>
+            <li>For protected subjects such as the key and ledger, allow only explicitly safe descriptive categories. Do not generate new ledger advice or replace the guarded key’s ownership.</li>
+            <li>Resolve canonical subjects/facets before insertion. Reuse equivalent facts; reject contradictory values in overlapping scopes. Semantic review catches equivalent or contradictory statements expressed under different facet names.</li>
+            <li>Check the proposal against all encounter constraints and committed facts. For this small game, send the whole overlay rather than using lossy summaries.</li>
+            <li>Require positive, evidence-backed access before presenting direct observation. “No access evidence” is not “the subject does not exist.”</li>
+            <li>Bind the proposal to the state revision it examined. Commit once; retries with the same proposal ID return the original result.</li>
+          </ul>
+        </details>
+      </section>
+
+      <section id="integration">
+        <div class="eyebrow">06 / Fit with the current implementation</div>
+        <h2>Extend the observation path; keep the existing mechanics.</h2>
+        <p>The present architecture already separates interpretation, authoritative resolution, and narration. Preserve that separation and add a narrow enrichment service. There is no need for an autonomous agent loop, a vector database, or a complete simulation engine.</p>
+        <p>Suggested module boundaries: <code>world/scene.py</code> owns authored anchors and policy; <code>world/facts.py</code> owns fact types, validation, and commit; <code>observations.py</code> coordinates model resolution and review using the Bonsai transport. Keep HTTP calls outside the world layer. The CLI prepares a validated observation resolution, then passes it to a network-free turn resolver.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Repository evidence and proposed changes</caption>
+            <thead><tr><th scope="col">Current boundary</th><th scope="col">Implementation proposal</th></tr></thead>
+            <tbody>
+              <tr><td><a href="convgame/jev/scene_constants.py">scene_constants.py</a><br>Scene content is fixed; only three objects are listed.</td><td>Move shared authored scene content into the world layer. Add broad observation policy, protected facts, and a few access anchors. Include opening and <code>/look</code> facts so those descriptions agree with the models’ context.</td></tr>
+              <tr><td><a href="convgame/jev/question_constants.py">question_constants.py</a>, <a href="convgame/jev/questions.py">questions.py</a>, <a href="convgame/world/decisions.py">decisions.py</a><br>Questions choose <code>none</code> as an action; inspection and speech objects use a closed enum.</td><td>Add <code>Action.OBSERVE</code> for direct information requests and scenery inspection. It needs no <code>Object</code> enum target. The resolver receives the original untrusted line and returns a canonical query. Preserve existing authored inspections and explicit speech rules.</td></tr>
+              <tr><td><a href="convgame/jev/decoder.py">decoder.py</a>, <a href="convgame/world/validation.py">validation.py</a><br>Unknown inspection targets cause rejection.</td><td>Validate <code>OBSERVE</code> without requiring a predefined <code>action_object</code>; keep the confidence gate on its classification. Decode the enrichment reply with its own schema. Do not expand the shared object enum to arbitrary generated scenery.</td></tr>
+              <tr><td><a href="convgame/world/state.py">state.py</a><br>Only mechanical flags and six recent messages are shared.</td><td>Add the referent/fact/evidence overlay and revisions. Deep-copy mutable collections when drafting a turn; the current <code>replace</code> in <a href="convgame/world/turn.py">turn.py</a> only copies history explicitly. Generated facts persist for the encounter independently of history.</td></tr>
+              <tr><td><a href="convgame/world/actions.py">actions.py</a>, <a href="convgame/world/outcomes.py">outcomes.py</a><br>Inspection returns an object ID that is used as a directive key.</td><td>Return a generic contextual observation event instead of using a generated subject as a <code>DIRECTIVES</code> key. Keep key, ledger, bell, plan, and ending rules. Add observation to retained outcome narration on the final turn.</td></tr>
+              <tr><td><a href="convgame/world/emotions.py">emotions.py</a><br>The quiet-action exemption covers <code>NONE</code> and <code>INSPECT</code>.</td><td>Add <code>OBSERVE</code> to that exemption. A bare question about scenery does not change Maren’s emotions; explicit speech still follows the existing reaction rules.</td></tr>
+              <tr><td><a href="convgame/bonsai.py">bonsai.py</a><br>The system prompt forbids inventing facts; its parser checks response structure, not factual consistency.</td><td>Add separate <code>resolve_observation</code> and <code>review_observation</code> methods with their own prompts and schemas. The resolution method is allowed to propose facts. The narration method continues to use accepted facts only.</td></tr>
+              <tr><td><a href="convgame/cli.py">cli.py</a>, <a href="convgame/trace.py">trace.py</a><br>The CLI advances the world, then narrates and remembers a short transcript.</td><td>Prepare an observation before committing its turn, pass the accepted resolution into the world layer, and render approved observation statements. Log query, access evidence, reused facts, patch, verdict, rejection reason, and commit revision.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="evidence">Specific current anchors: scene objects at scene_constants.py:10–14; question exclusion at question_constants.py:35–47; short-history snapshot at state.py:57; strict Narrator rule at bonsai.py:27; window description at cli.py:65–67. The view from that window is an authoring decision, not an established geometry fact.</p>
+        <h3>Turn and failure behavior</h3>
+        <p>Keep the current rule: each evaluated observation, limitation, or clarification consumes one turn; <code>/look</code> and <code>/status</code> remain free and read-only. Quiet observations do not affect Maren’s mood, read the ledger, agree a plan, or award the key. Questions about the ledger’s color are distinct from physically reading its advice.</p>
+        <p>If Jev or the observation-resolution service fails before an accepted resolution is prepared, preserve the original world and turn. If a proposal is rejected semantically, provide a grounded limitation or established-information fallback and consume the evaluated turn. Once a turn and fact patch commit, later rendering failure uses the approved fallback and retains them. The final turn presents the observation before the timeout outcome, as current physical inspections do.</p>
+        <p>Start with single observation lines. Preserve existing action-plus-speech inputs. For lines containing an observation and explicit speech, keep both channels separate and clarify combinations the first version cannot safely order. A later phase can resolve both in one transaction with the existing physical-before-speech ordering.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Expected model requests per turn in the proposed first version</caption>
+            <thead><tr><th scope="col">Turn type</th><th scope="col">Jev</th><th scope="col">Bonsai</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+              <tr><td>Existing authored action / speech</td><td>1 interpretation</td><td>Current narration request, where applicable</td><td>Existing behavior.</td></tr>
+              <tr><td>Observation using existing facts</td><td>1 interpretation</td><td>1 resolution</td><td>Approved statements rendered directly; no enrichment review if nothing new is inferred or proposed.</td></tr>
+              <tr><td>Observation establishing new detail</td><td>1 interpretation</td><td>1 resolution + 1 semantic review</td><td>Commit and render accepted statements. One rejected proposal may add one resolution and one review retry.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>This uses the existing services but adds latency when establishing new detail. Measure it. Optional exact-query caching must include scene revision, viewpoint, knowledge, and relevant fact revisions; arbitrary paraphrases still need resolution. Optimizing to one combined model request can come later, after factual consistency and failure behavior are demonstrated.</p>
+      </section>
+
+      <section id="validation">
+        <div class="eyebrow">07 / Delivery and acceptance</div>
+        <h2>Prove flexibility and continuity together.</h2>
+        <article class="step">
+          <div class="number" aria-hidden="true">1</div>
+          <div><h3>Build the state and policy foundation.</h3><p>Create shared scene anchors, protected constraints, typed fact/evidence structures, a pure patch validator, and an atomic commit path. Keep the existing winning sequence and failure semantics intact.</p></div>
+        </article>
+        <article class="step">
+          <div class="number" aria-hidden="true">2</div>
+          <div><h3>Connect direct observations.</h3><p>Add Jev’s observation classification, Bonsai’s structured resolution and review, and the generic observation response. Enable descriptive scenery and sensory limitations without requiring registered targets.</p></div>
+        </article>
+        <article class="step">
+          <div class="number" aria-hidden="true">3</div>
+          <div><h3>Evaluate, then expand interaction.</h3><p>Run deterministic contract tests and a small live suite of unfamiliar questions. Once consistent, extend character questions, mixed observation/speech lines, and explicitly authored interactions with generated scenery.</p></div>
+        </article>
+        <div class="table-wrap">
+          <table>
+            <caption>Acceptance scenarios for the implementation</caption>
+            <thead><tr><th scope="col">Scenario</th><th scope="col">Required result</th></tr></thead>
+            <tbody>
+              <tr><td>Unlisted subject</td><td>“Are there clouds in the sky?” resolves without a sky enum or directive. Typos such as “clounds” and “on the sky” do not require a new rule.</td></tr>
+              <tr><td>Continuity beyond history</td><td>Establish cloud cover, advance until its response leaves the six-message window, then ask a paraphrase. Reuse the same fact ID and compatible answer.</td></tr>
+              <tr><td>Constraints and minimality</td><td>Stormbound harbor produces compatible weather. A bright-sun scene permits clear or lightly cloudy skies. No generated resources, safety shortcuts, or extra characters appear.</td></tr>
+              <tr><td>Perception and uncertainty</td><td>Cellar questions do not reveal the sky. Remote temperature questions do not invent a measurement. Estimates remain labeled and separate from objective facts.</td></tr>
+              <tr><td>Scoped absence and presuppositions</td><td>“Are there more boats?” does not assume an extra boat exists. Absence applies to a justified view; an authored visible boat cannot be erased.</td></tr>
+              <tr><td>Canonicalization and contradictions</td><td>Alias/paraphrase queries reuse subjects and facets. Reject clear-versus-overcast conflicts in the same weather episode, including contradictory statements under different facet names.</td></tr>
+              <tr><td>Protected mechanics</td><td>“What color is the ledger?” leaves <code>ledger_read</code> false. Attempts to add a spare key, declare route safety, change ownership, or set a win flag fail. The current winning sequence still works.</td></tr>
+              <tr><td>Input channels</td><td>Bare observation → Narrator; addressed question → Maren; private thought → no audible dialogue. Unspoken information cannot alter trust or promise a plan.</td></tr>
+              <tr><td>Failure and commit</td><td>Malformed/rejected patches commit nothing. Pre-resolution service failure uses no turn. Approved fallback after commit preserves facts and turn exactly once. Final-turn observation survives before timeout.</td></tr>
+              <tr><td>Revision and lifecycle</td><td>A stale proposal cannot overwrite a newer state. An authored weather change supersedes weather facts explicitly. A new encounter starts with a fresh generated overlay.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Offline tests should exercise the real classifier decoder, schema handling, patch validation, commit, and renderer, with model transport mocked. Live evaluation should use unseen paraphrases and multi-turn sequences; track sensible-answer rate, contradictions, unsupported knowledge, unintended story opportunities, fallback frequency, and latency. Do not equate valid JSON or a reviewer’s confidence with semantic correctness.</p>
+        <div class="note"><p><strong>The success criterion:</strong> a player can ask a sensible new question without the author having anticipated it; the game supplies a perceptible, compatible, minimal answer, and that answer remains part of the same world on later turns.</p></div>
+      </section>
+    </main>
+    <footer>Proposal only, grounded in the current repository and the earlier water-observation document. Examples and data structures are proposed. No game implementation changes are included. This document is self-contained and its source links are relative to the repository root.</footer>
+  </div>
+</body>
+</html>

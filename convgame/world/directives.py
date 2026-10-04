@@ -23,6 +23,7 @@ class Beat:
     speaker: Speaker
     instruction: str
     fallback: str
+    approved: bool = False
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,10 @@ DIRECTIVES: Final[dict[str, Directive]] = {
     constants.CLARIFY_EVENT: _narration(constants.CLARIFY_EVENT, constants.CLARIFY_INSTRUCTION, constants.CLARIFY_FALLBACK),
     constants.OFF_WORLD_EVENT: _narration(constants.OFF_WORLD_EVENT, constants.OFF_WORLD_INSTRUCTION, constants.OFF_WORLD_FALLBACK),
     constants.UNSPOKEN_EVENT: _narration(constants.UNSPOKEN_EVENT, constants.UNSPOKEN_INSTRUCTION, constants.UNSPOKEN_FALLBACK),
+    constants.MIXED_OBSERVATION_EVENT: _narration(
+        constants.MIXED_OBSERVATION_EVENT, "Ask for separate observation and speech lines.",
+        "Ask about the scenery and speak to Maren in separate turns so each is clear.",
+    ),
     constants.LEDGER_EVENT: _narration(constants.LEDGER_EVENT, constants.LEDGER_INSTRUCTION, constants.LEDGER_FALLBACK),
     constants.KEY_EVENT: _narration(constants.KEY_EVENT, constants.KEY_INSTRUCTION, constants.KEY_FALLBACK),
     constants.BELL_EVENT: _narration(constants.BELL_EVENT, constants.BELL_INSTRUCTION, constants.BELL_FALLBACK),
